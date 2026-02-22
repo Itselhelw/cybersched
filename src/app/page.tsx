@@ -4,7 +4,23 @@ import { useState, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 type Category = 'body' | 'mind' | 'work' | 'quit' | 'fun';
-type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'english';
+type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'english' | 'settings';
+
+interface Settings {
+  name: string;
+  cigarettesPerDay: number;
+  costPerPack: number;
+  cigarettesPerPack: number;
+  currency: string;
+}
+
+const DEFAULT_SETTINGS: Settings = {
+  name: 'Legend',
+  cigarettesPerDay: 20,
+  costPerPack: 10,
+  cigarettesPerPack: 20,
+  currency: '$',
+};
 
 interface Task {
   id: string;
@@ -667,12 +683,198 @@ function EnglishSection() {
   );
 }
 
+// ── SETTINGS SECTION ──────────────────────────────────────────────
+function SettingsSection({ settings, setSettings }: { settings: Settings; setSettings: (s: Settings) => void }) {
+  const [edited, setEdited] = useState(false);
+  const [form, setForm] = useState(settings);
+
+  function save() {
+    setSettings(form);
+    setEdited(false);
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <div className="header-title">CyberSched // Settings</div>
+        <div className="header-greeting">Personalize <span>Your</span> <span>Path</span></div>
+        <div className="header-date">Customize your life OS for maximum resonance</div>
+      </div>
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">// User Profile</div>
+        </div>
+        <div className="input-group">
+          <label className="input-label">YOUR NAME</label>
+          <input className="input-field" value={form.name} onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setEdited(true); }} placeholder="Enter your name" />
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">// Smoking Stats (for savings calculation)</div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
+          <div className="input-group">
+            <label className="input-label">CIGARETTES PER DAY</label>
+            <input className="input-field" type="number" min="1" value={form.cigarettesPerDay} onChange={e => { setForm(p => ({ ...p, cigarettesPerDay: Number(e.target.value) })); setEdited(true); }} />
+          </div>
+          <div className="input-group">
+            <label className="input-label">COST PER PACK</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input-field" type="number" min="0.01" step="0.01" value={form.costPerPack} onChange={e => { setForm(p => ({ ...p, costPerPack: Number(e.target.value) })); setEdited(true); }} style={{ flex: 1 }} />
+              <input className="input-field" value={form.currency} onChange={e => { setForm(p => ({ ...p, currency: e.target.value })); setEdited(true); }} style={{ width: 60 }} />
+            </div>
+          </div>
+          <div className="input-group">
+            <label className="input-label">CIGARETTES PER PACK</label>
+            <input className="input-field" type="number" min="1" value={form.cigarettesPerPack} onChange={e => { setForm(p => ({ ...p, cigarettesPerPack: Number(e.target.value) })); setEdited(true); }} />
+          </div>
+        </div>
+      </div>
+      {edited && (
+        <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
+          <button className="btn-primary" onClick={save}>SAVE SETTINGS</button>
+          <button className="btn-secondary" onClick={() => { setForm(settings); setEdited(false); }}>CANCEL</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── AI MOTIVATION CARD ────────────────────────────────────────────
+function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goals }: {
+  settings: Settings;
+  smokeStats: { days: number; hours: number; minutes: number; cigarettes: number; moneySaved: string; percent: number };
+  gymStreak: number;
+  completionPct: number;
+  goals: string;
+}) {
+  const [motivation, setMotivation] = useLocalStorage<string>('cybersched-motivation', '');
+  const [motivDate, setMotivDate] = useLocalStorage<string>('cybersched-motiv-date', '');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const today = todayStr();
+    if (motivDate !== today) {
+      setLoading(true);
+      fetch('/api/motivate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: settings.name,
+          smokeDays: smokeStats.days,
+          gymStreak,
+          completionPct,
+          goals: goals || 'become the best version',
+        }),
+      })
+        .then(r => r.json())
+        .then(d => {
+          setMotivation(d.message);
+          setMotivDate(today);
+        })
+        .catch(() => setMotivation('Every day smoke-free is a war won. Keep going.'))
+        .finally(() => setLoading(false));
+    }
+  }, []);
+
+  return (
+    <div className="ai-insight" style={{ marginBottom: 20 }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--cyan)', letterSpacing: 2, marginBottom: 10 }}>◉ AI MOTIVATION</div>
+      <div className="ai-insight-text">
+        {loading ? 'Generating your daily message...' : motivation || 'Show up today. That is enough.'}
+      </div>
+    </div>
+  );
+}
+
+// ── POMODORO TIMER ────────────────────────────────────────────────
+function PomodoroTimer() {
+  const [count, setCount] = useLocalStorage<number>('cybersched-pomodoros', 0);
+  const [mode, setMode] = useState<'work' | 'shortBreak' | 'longBreak'>('work');
+  const [time, setTime] = useState(25 * 60);
+  const [running, setRunning] = useState(false);
+
+  const modes = {
+    work: { label: 'WORK', time: 25 * 60, color: 'var(--cyan)' },
+    shortBreak: { label: 'SHORT BREAK', time: 5 * 60, color: 'var(--orange)' },
+    longBreak: { label: 'LONG BREAK', time: 15 * 60, color: 'var(--green)' },
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (running && time > 0) {
+      interval = setInterval(() => setTime(t => t - 1), 1000);
+    } else if (time === 0 && running) {
+      setRunning(false);
+      if (mode === 'work') setCount(c => c + 1);
+      setMode(mode === 'work' ? 'shortBreak' : 'work');
+      setTime(modes[mode === 'work' ? 'shortBreak' : 'work'].time);
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [running, time, mode]);
+
+  function reset() {
+    setTime(modes[mode].time);
+    setRunning(false);
+  }
+
+  const mins = Math.floor(time / 60);
+  const secs = time % 60;
+  const percent = mode === 'work' ? ((25 * 60 - time) / (25 * 60)) * 100 : 100;
+
+  return (
+    <div className="card" style={{ border: `1px solid ${modes[mode].color}40`, marginBottom: 20 }}>
+      <div className="card-header">
+        <div className="card-title" style={{ color: modes[mode].color }}>// Pomodoro</div>
+        <span className="card-action" style={{ color: modes[mode].color }}>{count} sessions</span>
+      </div>
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto', marginBottom: 18 }}>
+          <svg width={140} height={140} viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx={70} cy={70} r={60} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={3} />
+            <circle cx={70} cy={70} r={60} fill="none" stroke={modes[mode].color} strokeWidth={3}
+              strokeDasharray={`${(percent / 100) * 2 * Math.PI * 60} ${2 * Math.PI * 60}`}
+              strokeLinecap="round" style={{ filter: `drop-shadow(0 0 6px ${modes[mode].color})` }} />
+          </svg>
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, color: modes[mode].color }}>{String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)', letterSpacing: 1 }}>{modes[mode].label}</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+        <button className="btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => setRunning(!running)}>
+          {running ? 'PAUSE' : 'START'}
+        </button>
+        <button className="btn-secondary" style={{ flex: 1, fontSize: 12 }} onClick={reset}>RESET</button>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {(Object.keys(modes) as Array<'work' | 'shortBreak' | 'longBreak'>).map(m => (
+          <button key={m} onClick={() => { setMode(m); setTime(modes[m].time); setRunning(false); }}
+            style={{
+              flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid`,
+              borderColor: mode === m ? modes[m].color : 'var(--border)',
+              background: mode === m ? `${modes[m].color}15` : 'transparent',
+              color: mode === m ? modes[m].color : 'var(--text-secondary)',
+              fontFamily: 'var(--font-mono)', fontSize: 10, cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}>
+            {m === 'work' ? '25M' : m === 'shortBreak' ? '5M' : '15M'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('cybersched-tasks', DEFAULT_TASKS);
   const [habits, setHabits] = useLocalStorage<HabitStat[]>('cybersched-habits', DEFAULT_HABITS);
   const [activeNav, setActiveNav] = useState<NavSection>('dashboard');
   const [quitDate, setQuitDate] = useLocalStorage<string>('cybersched-quitdate', '');
+  const [settings, setSettings] = useLocalStorage<Settings>('cybersched-settings', DEFAULT_SETTINGS);
 
   // Calculate everything from quit date in real time
   const smokeStats = (() => {
@@ -681,8 +883,9 @@ export default function Dashboard() {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    const cigarettes = Math.floor(days * 20); // assumes 1 pack/day
-    const moneySaved = (days * 5).toFixed(2);  // assumes $5/day
+    const cigarettes = Math.floor(days * settings.cigarettesPerDay);
+    const costPerCigarette = settings.costPerPack / settings.cigarettesPerPack;
+    const moneySaved = (days * settings.cigarettesPerDay * costPerCigarette).toFixed(2);
     const percent = Math.min((days / 90) * 100, 100); // 90 day goal
     return { days, hours, minutes, cigarettes, moneySaved, percent };
   })();
@@ -732,6 +935,7 @@ export default function Dashboard() {
     { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
     { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
     { id: 'english' as NavSection, icon: '◉', label: 'English' },
+    { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
   ];
 
   return (
@@ -746,11 +950,6 @@ export default function Dashboard() {
             <span className="nav-label">{nav.label}</span>
           </button>
         ))}
-        <div style={{ flex: 1 }} />
-        <button className="nav-item" style={{ color: 'var(--red)' }}>
-          <span className="nav-icon">⊗</span>
-          <span className="nav-label">Settings</span>
-        </button>
       </nav>
 
       {/* MAIN CONTENT */}
@@ -762,7 +961,7 @@ export default function Dashboard() {
             <div className="header">
               <div>
                 <div className="header-title">CyberSched // Life OS</div>
-                <div className="header-greeting">Welcome back, <span className="cursor-blink">Legend</span></div>
+                <div className="header-greeting">Welcome back, <span className="cursor-blink">{settings.name}</span></div>
                 <div className="header-date">
                   {displayDay.toUpperCase()} · {displayMonth} {displayDate}, {displayYear} ·{' '}
                   <span style={{ color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>{displayTime}</span>
@@ -859,12 +1058,15 @@ export default function Dashboard() {
               </div>
 
               <div className="content-right">
-                <div className="ai-insight">
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--cyan)', letterSpacing: 2, marginBottom: 10 }}>◉ AI INSIGHT</div>
-                  <div className="ai-insight-text">
-                    <strong>Pattern detected:</strong> You complete gym tasks 85% more often on weekdays. Consider lighter activity on weekends to maintain the habit chain.
-                  </div>
-                </div>
+                <AIMotivationCard
+                  settings={settings}
+                  smokeStats={smokeStats}
+                  gymStreak={habits[0]?.streak || 0}
+                  completionPct={completionPct}
+                  goals=""
+                />
+
+                <PomodoroTimer />
 
                 <QuitCounterCard
                   quitDate={quitDate}
@@ -893,6 +1095,7 @@ export default function Dashboard() {
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habits} quitDate={quitDate} setQuitDate={setQuitDate} smokeStats={smokeStats} />}
         {activeNav === 'planner' && <PlannerSection />}
         {activeNav === 'english' && <EnglishSection />}
+        {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={setSettings} />}
       </main>
 
       {/* ADD TASK MODAL */}
