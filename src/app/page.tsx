@@ -235,12 +235,132 @@ function HabitsSection({ habits, setHabits }: { habits: HabitStat[]; setHabits: 
   );
 }
 
+// ── QUIT COUNTER CARD ─────────────────────────────────────────────
+function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
+  quitDate: string;
+  setQuitDate: (d: string) => void;
+  smokeStats: { days: number; hours: number; minutes: number; cigarettes: number; moneySaved: string; percent: number };
+}) {
+  const milestones = [
+    { days: 1,  label: '24 Hours',  desc: 'Heart rate normalizes',     icon: '🫀' },
+    { days: 3,  label: '3 Days',    desc: 'Nicotine fully cleared',     icon: '🧹' },
+    { days: 7,  label: '1 Week',    desc: 'Taste & smell improving',    icon: '👃' },
+    { days: 14, label: '2 Weeks',   desc: 'Circulation improves',       icon: '💓' },
+    { days: 30, label: '1 Month',   desc: 'Lung capacity increases',    icon: '🫁' },
+    { days: 90, label: '3 Months',  desc: 'Circulation fully restored', icon: '⚡' },
+  ];
+
+  const nextMilestone = milestones.find(m => m.days > smokeStats.days);
+
+  return (
+    <div className="card" style={{ border: '1px solid rgba(0,255,136,0.2)' }}>
+      <div className="card-header">
+        <div className="card-title" style={{ color: 'var(--green)' }}>// Quit Counter</div>
+        {quitDate && (
+          <button className="card-action" style={{ color: 'var(--red)' }}
+            onClick={() => { if (confirm('Reset quit date?')) setQuitDate(''); }}>
+            RESET
+          </button>
+        )}
+      </div>
+
+      {!quitDate ? (
+        // ── NO QUIT DATE SET ──
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🚭</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-primary)', marginBottom: 6 }}>
+            Set Your Quit Date
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>
+            Enter the date you stopped smoking.<br />Your counter starts from that moment.
+          </div>
+          <input type="date" className="input-field"
+            max={new Date().toISOString().split('T')[0]}
+            onChange={e => e.target.value && setQuitDate(e.target.value)}
+            style={{ textAlign: 'center', cursor: 'pointer', maxWidth: 200, margin: '0 auto' }} />
+        </div>
+      ) : (
+        // ── QUIT DATE IS SET ──
+        <div>
+          {/* Big counter */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 56, fontWeight: 900, color: 'var(--green)', textShadow: '0 0 30px rgba(0,255,136,0.4)', lineHeight: 1 }}>
+              {smokeStats.days}
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', letterSpacing: 2, marginTop: 4 }}>
+              DAYS SMOKE-FREE
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              {smokeStats.hours}h · {smokeStats.minutes}min total
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+            {[
+              { label: 'Money Saved', value: `$${smokeStats.moneySaved}`, color: 'var(--green)', icon: '💰' },
+              { label: 'Cigs Avoided', value: `${smokeStats.cigarettes}`, color: 'var(--cyan)', icon: '🚬' },
+            ].map((s, i) => (
+              <div key={i} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                <div style={{ fontSize: 20, marginBottom: 6 }}>{s.icon}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Progress to 90 day goal */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+              <span>Progress to 90-day goal</span>
+              <span style={{ color: 'var(--green)' }}>{Math.round(smokeStats.percent)}%</span>
+            </div>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${smokeStats.percent}%`, background: 'linear-gradient(90deg, var(--green), var(--cyan))' }} />
+            </div>
+          </div>
+
+          {/* Next milestone */}
+          {nextMilestone && (
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.15)', marginBottom: 16 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--green)', letterSpacing: 2, marginBottom: 4 }}>NEXT MILESTONE</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>{nextMilestone.icon}</span>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--text-primary)', fontWeight: 700 }}>{nextMilestone.label}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>
+                    {nextMilestone.desc} · {nextMilestone.days - smokeStats.days} days away
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* All milestones */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {milestones.map(ms => (
+              <div key={ms.days} className={`milestone ${smokeStats.days >= ms.days ? 'achieved' : ''}`}>
+                <span className="milestone-icon">{ms.icon}</span>
+                <div className="milestone-info">
+                  <div className="milestone-name">{ms.label}</div>
+                  <div className="milestone-desc">{ms.desc}</div>
+                </div>
+                <span>{smokeStats.days >= ms.days ? '✅' : `${ms.days - smokeStats.days}d`}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── STATS SECTION ─────────────────────────────────────────────────
-function StatsSection({ tasks, habits, smokeDays }: { tasks: Task[]; habits: HabitStat[]; smokeDays: number }) {
+function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: HabitStat[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: { days: number; hours: number; minutes: number; cigarettes: number; moneySaved: string; percent: number } }) {
   const completed = tasks.filter(t => t.done).length;
   const total = tasks.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const moneySaved = (smokeDays * 20 * 0.5).toFixed(0);
+  const moneySaved = smokeStats.moneySaved;
   const categoryBreakdown = (['body', 'mind', 'work', 'quit', 'fun'] as Category[]).map(cat => ({
     cat,
     total: tasks.filter(t => t.category === cat).length,
@@ -257,7 +377,7 @@ function StatsSection({ tasks, habits, smokeDays }: { tasks: Task[]; habits: Hab
       <div className="stats-grid" style={{ marginBottom: 24 }}>
         {[
           { label: 'Overall Completion', value: `${pct}%`, sub: `${completed} of ${total} tasks`, accent: 'var(--cyan)' },
-          { label: 'Days Smoke Free', value: `${smokeDays}`, sub: `$${moneySaved} saved`, accent: 'var(--green)' },
+          { label: 'Days Smoke Free', value: `${smokeStats.days}`, sub: `$${moneySaved} saved`, accent: 'var(--green)' },
           { label: 'Best Streak', value: `${Math.max(...habits.map(h => h.streak))}d`, sub: 'consecutive days', accent: 'var(--orange)' },
           { label: 'Habits Done Today', value: `${habits.filter(h => h.todayDone).length}/${habits.length}`, sub: 'habits completed', accent: 'var(--purple)' },
         ].map((s, i) => (
@@ -298,25 +418,11 @@ function StatsSection({ tasks, habits, smokeDays }: { tasks: Task[]; habits: Hab
             </div>
           ))}
         </div>
-        <div className="card" style={{ gridColumn: '1 / -1', border: '1px solid rgba(0,255,136,0.2)' }}>
-          <div className="card-header"><div className="card-title" style={{ color: 'var(--green)' }}>// Quit Smoking Timeline</div></div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-            {[
-              { days: 1, label: '24 hrs', desc: 'Heart rate normal', icon: '🫀' },
-              { days: 3, label: '3 days', desc: 'Nicotine cleared', icon: '🧹' },
-              { days: 7, label: '1 week', desc: 'Senses recover', icon: '👃' },
-              { days: 30, label: '1 month', desc: 'Lung capacity+', icon: '🫁' },
-              { days: 90, label: '3 months', desc: 'Circulation full', icon: '⚡' },
-            ].map(ms => (
-              <div key={ms.days} style={{ textAlign: 'center', padding: 16, borderRadius: 10, background: smokeDays >= ms.days ? 'rgba(0,255,136,0.08)' : 'var(--bg-secondary)', border: `1px solid ${smokeDays >= ms.days ? 'rgba(0,255,136,0.3)' : 'var(--border)'}` }}>
-                <div style={{ fontSize: 24, marginBottom: 8 }}>{ms.icon}</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: smokeDays >= ms.days ? 'var(--green)' : 'var(--text-muted)', fontWeight: 700, marginBottom: 4 }}>{ms.label}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>{ms.desc}</div>
-                <div style={{ marginTop: 8, fontSize: 16 }}>{smokeDays >= ms.days ? '✅' : '○'}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <QuitCounterCard
+          quitDate={quitDate}
+          setQuitDate={setQuitDate}
+          smokeStats={smokeStats}
+        />
       </div>
     </div>
   );
@@ -438,29 +544,36 @@ export default function Dashboard() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('cybersched-tasks', DEFAULT_TASKS);
   const [habits, setHabits] = useLocalStorage<HabitStat[]>('cybersched-habits', DEFAULT_HABITS);
   const [activeNav, setActiveNav] = useState<NavSection>('dashboard');
-  const [smokeDays, setSmokeDays] = useLocalStorage<number>('cybersched-smokedays', 0);
   const [quitDate, setQuitDate] = useLocalStorage<string>('cybersched-quitdate', '');
+
+  // Calculate everything from quit date in real time
+  const smokeStats = (() => {
+    if (!quitDate) return { days: 0, hours: 0, minutes: 0, cigarettes: 0, moneySaved: '0', percent: 0 };
+    const diff = Date.now() - new Date(quitDate).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    const cigarettes = Math.floor(days * 20); // assumes 1 pack/day
+    const moneySaved = (days * 5).toFixed(2);  // assumes $5/day
+    const percent = Math.min((days / 90) * 100, 100); // 90 day goal
+    return { days, hours, minutes, cigarettes, moneySaved, percent };
+  })();
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
     setNow(new Date());
-    // Auto-calculate smoke-free days from quit date
-    if (quitDate) {
-      const days = Math.floor((Date.now() - new Date(quitDate).getTime()) / (1000 * 60 * 60 * 24));
-      setSmokeDays(days);
-    }
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
-  }, [quitDate, setSmokeDays]);
+  }, [quitDate]);
 
   const weekDates = getWeekDates();
   const todayDayIdx = now ? now.getDay() : new Date().getDay();
   const completedToday = tasks.filter(t => t.done && t.date === todayStr()).length;
   const totalToday = tasks.filter(t => t.date === todayStr()).length;
   const completionPct = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
-  const moneySaved = (smokeDays * 20 * 0.5).toFixed(0);
+  const moneySaved = smokeStats.moneySaved;
 
   function toggleTask(id: string) {
     setTasks(prev => prev.map(t => {
@@ -529,14 +642,14 @@ export default function Dashboard() {
               </div>
               <div className="header-right">
                 <div className="streak-badge">🔥 {habits[0].streak} day streak</div>
-                <div className="streak-badge" style={{ color: 'var(--green)', boxShadow: '0 0 20px rgba(0,255,136,0.1)' }}>🚭 {smokeDays} days clean</div>
+                <div className="streak-badge" style={{ color: 'var(--green)', boxShadow: '0 0 20px rgba(0,255,136,0.1)' }}>🚭 {smokeStats.days} days clean</div>
               </div>
             </div>
 
             <div className="stats-grid">
-              {[
+                {[
                 { label: "Today's Score", value: `${completionPct}%`, sub: `${completedToday}/${totalToday} tasks done`, icon: '◈', accent: 'var(--cyan)' },
-                { label: 'Smoke Free', value: `${smokeDays}d`, sub: `≈ $${moneySaved} saved`, icon: '🚭', accent: 'var(--green)' },
+                { label: 'Smoke Free', value: `${smokeStats.days}d`, sub: `≈ $${moneySaved} saved`, icon: '🚭', accent: 'var(--green)' },
                 { label: 'Gym Streak', value: `${habits[0].streak}`, sub: 'days consecutive', icon: '💪', accent: 'var(--orange)' },
                 { label: 'Study Streak', value: `${habits[1].streak}`, sub: 'days consecutive', icon: '📚', accent: 'var(--purple)' },
               ].map((stat, i) => (
@@ -625,42 +738,11 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="card" style={{ border: '1px solid rgba(0,255,136,0.2)' }}>
-                  <div className="card-header">
-                    <div className="card-title" style={{ color: 'var(--green)' }}>// Quit Counter</div>
-                  </div>
-                  {!quitDate && (
-                    <div style={{ marginBottom: 16, textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, letterSpacing: 1 }}>SET YOUR QUIT DATE</div>
-                      <input type="date" className="input-field"
-                        max={new Date().toISOString().split('T')[0]}
-                        onChange={e => setQuitDate(e.target.value)}
-                        style={{ textAlign: 'center', cursor: 'pointer' }} />
-                    </div>
-                  )}
-                  <div className="smoke-tracker">
-                    <div className="smoke-days">{smokeDays}</div>
-                    <div className="smoke-label">days smoke-free</div>
-                    <div className="smoke-milestones">
-                      {[
-                        { days: 1, name: '24 Hours', desc: 'Heart rate normalizes', icon: '🫀' },
-                        { days: 3, name: '3 Days', desc: 'Nicotine fully cleared', icon: '🧹' },
-                        { days: 7, name: '1 Week', desc: 'Taste & smell improving', icon: '👃' },
-                        { days: 30, name: '1 Month', desc: 'Lung capacity increases', icon: '🫁' },
-                        { days: 90, name: '3 Months', desc: 'Circulation restored', icon: '⚡' },
-                      ].map(ms => (
-                        <div key={ms.days} className={`milestone ${smokeDays >= ms.days ? 'achieved' : ''}`}>
-                          <span className="milestone-icon">{ms.icon}</span>
-                          <div className="milestone-info">
-                            <div className="milestone-name">{ms.name}</div>
-                            <div className="milestone-desc">{ms.desc}</div>
-                          </div>
-                          <span>{smokeDays >= ms.days ? '✅' : '○'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <QuitCounterCard
+                  quitDate={quitDate}
+                  setQuitDate={setQuitDate}
+                  smokeStats={smokeStats}
+                />
 
                 <div className="card" style={{ border: '1px solid rgba(157,78,221,0.2)' }}>
                   <div className="card-header">
@@ -680,7 +762,7 @@ export default function Dashboard() {
 
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={setTasks} />}
         {activeNav === 'habits' && <HabitsSection habits={habits} setHabits={setHabits} />}
-        {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habits} smokeDays={smokeDays} />}
+        {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habits} quitDate={quitDate} setQuitDate={setQuitDate} smokeStats={smokeStats} />}
         {activeNav === 'planner' && <PlannerSection />}
         {activeNav === 'english' && <EnglishSection />}
       </main>
