@@ -1,65 +1,722 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+
+type Category = 'body' | 'mind' | 'work' | 'quit' | 'fun';
+type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'english';
+
+interface Task {
+  id: string;
+  name: string;
+  category: Category;
+  time: string;
+  done: boolean;
+  date: string;
+}
+
+interface HabitStat {
+  id: Category;
+  label: string;
+  icon: string;
+  color: string;
+  streak: number;
+  todayDone: boolean;
+  weekProgress: number;
+}
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CATEGORY_LABELS: Record<Category, string> = { body: 'Body', mind: 'Mind', work: 'Work', quit: 'Quit', fun: 'Fun' };
+
+const ENGLISH_WORDS = [
+  { word: 'Resilience', type: 'noun', def: 'The ability to recover quickly from difficulties; toughness.', example: '"Her resilience helped her overcome every setback."' },
+  { word: 'Discipline', type: 'noun', def: 'Training oneself to do something in a controlled and habitual way.', example: '"Discipline is the bridge between goals and accomplishment."' },
+  { word: 'Persevere', type: 'verb', def: 'Continue in a course of action despite difficulty.', example: '"He persevered through the hardest moments."' },
+  { word: 'Momentum', type: 'noun', def: 'The impetus and driving force gained by developing events.', example: '"Build momentum with small wins every day."' },
+  { word: 'Meticulous', type: 'adjective', def: 'Showing great attention to detail; very careful and precise.', example: '"He was meticulous in tracking his progress."' },
+  { word: 'Tenacity', type: 'noun', def: 'The quality of being determined and persistent.', example: '"Her tenacity pushed her past every obstacle."' },
+  { word: 'Acumen', type: 'noun', def: 'The ability to make good judgments and quick decisions.', example: '"His business acumen led to rapid growth."' },
+];
+
+const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }[]> = {
+  0: [{ label: 'Rest', color: '#6b6b8a', bg: 'rgba(107,107,138,0.15)' }],
+  1: [{ label: 'Gym', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Study', color: '#00f5ff', bg: 'rgba(0,245,255,0.12)' }, { label: 'Work', color: '#ff8c00', bg: 'rgba(255,140,0,0.12)' }],
+  2: [{ label: 'Run', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Work', color: '#ff8c00', bg: 'rgba(255,140,0,0.12)' }, { label: 'Read', color: '#00f5ff', bg: 'rgba(0,245,255,0.12)' }],
+  3: [{ label: 'Gym', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Deep Work', color: '#ff8c00', bg: 'rgba(255,140,0,0.12)' }],
+  4: [{ label: 'Study', color: '#00f5ff', bg: 'rgba(0,245,255,0.12)' }, { label: 'Work', color: '#ff8c00', bg: 'rgba(255,140,0,0.12)' }, { label: 'Game', color: '#9d4edd', bg: 'rgba(157,78,221,0.12)' }],
+  5: [{ label: 'Gym', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Study', color: '#00f5ff', bg: 'rgba(0,245,255,0.12)' }, { label: 'Social', color: '#9d4edd', bg: 'rgba(157,78,221,0.12)' }],
+  6: [{ label: 'Walk', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Game', color: '#9d4edd', bg: 'rgba(157,78,221,0.12)' }],
+};
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function getWeekDates() {
+  const today = new Date();
+  const day = today.getDay();
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - day + i);
+    return d;
+  });
+}
+
+const DEFAULT_TASKS: Task[] = [
+  { id: '1', name: 'Morning workout — chest & triceps', category: 'body', time: '07:00', done: false, date: todayStr() },
+  { id: '2', name: 'Study session — 2 focused pomodoros', category: 'mind', time: '09:00', done: false, date: todayStr() },
+  { id: '3', name: 'Deep work block — project tasks', category: 'work', time: '11:00', done: false, date: todayStr() },
+  { id: '4', name: 'Urge surfing meditation (5 min)', category: 'quit', time: '14:00', done: false, date: todayStr() },
+  { id: '5', name: 'Evening walk or light jog', category: 'body', time: '18:00', done: false, date: todayStr() },
+  { id: '6', name: 'Read 20 pages', category: 'mind', time: '20:00', done: false, date: todayStr() },
+  { id: '7', name: 'Gaming or social time (1.5h max)', category: 'fun', time: '21:30', done: false, date: todayStr() },
+];
+
+const DEFAULT_HABITS: HabitStat[] = [
+  { id: 'body', label: 'Gym', icon: '💪', color: '#00ff88', streak: 12, todayDone: false, weekProgress: 71 },
+  { id: 'mind', label: 'Study', icon: '📚', color: '#00f5ff', streak: 8, todayDone: false, weekProgress: 85 },
+  { id: 'work', label: 'Work', icon: '⚡', color: '#ff8c00', streak: 21, todayDone: false, weekProgress: 100 },
+  { id: 'quit', label: 'No Smoke', icon: '🚫', color: '#ff3366', streak: 7, todayDone: false, weekProgress: 100 },
+  { id: 'fun', label: 'Balanced', icon: '🎮', color: '#9d4edd', streak: 5, todayDone: false, weekProgress: 57 },
+];
+
+function HabitRing({ progress, color, size = 56 }: { progress: number; color: string; size?: number }) {
+  const r = (size - 8) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (progress / 100) * circ;
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4}
+        strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
+    </svg>
+  );
+}
+
+// ── TASKS SECTION ─────────────────────────────────────────────────
+function TasksSection({ tasks, setTasks }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>> }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [filter, setFilter] = useState<Category | 'all'>('all');
+  const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
+
+  function toggleTask(id: string) { setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t)); }
+  function deleteTask(id: string) { setTasks(prev => prev.filter(t => t.id !== id)); }
+  function addTask() {
+    if (!newTask.name.trim()) return;
+    setTasks(prev => [...prev, { id: Date.now().toString(), ...newTask, done: false, date: todayStr() }].sort((a, b) => a.time.localeCompare(b.time)));
+    setNewTask({ name: '', category: 'body', time: '09:00' });
+    setShowAdd(false);
+  }
+
+  const filtered = tasks.filter(t => filter === 'all' ? true : t.category === filter);
+  const done = filtered.filter(t => t.done).length;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <div className="header-title">CyberSched // Task Manager</div>
+        <div className="header-greeting">Mission <span>Control</span></div>
+        <div className="header-date">{done}/{filtered.length} tasks completed today</div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
+        {(['all', 'body', 'mind', 'work', 'quit', 'fun'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding: '8px 16px', borderRadius: 8, border: '1px solid',
+            borderColor: filter === f ? 'var(--cyan)' : 'var(--border)',
+            background: filter === f ? 'var(--cyan-glow)' : 'transparent',
+            color: filter === f ? 'var(--cyan)' : 'var(--text-secondary)',
+            fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
+            letterSpacing: 1, textTransform: 'uppercase' as const, transition: 'all 0.2s'
+          }}>{f === 'all' ? 'ALL' : `${f === 'body' ? '💪' : f === 'mind' ? '📚' : f === 'work' ? '⚡' : f === 'quit' ? '🚭' : '🎮'} ${CATEGORY_LABELS[f as Category]}`}</button>
+        ))}
+        <button onClick={() => setShowAdd(true)} style={{
+          marginLeft: 'auto', padding: '8px 20px', borderRadius: 8,
+          background: 'var(--cyan)', color: '#000', border: 'none',
+          fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, letterSpacing: 2, cursor: 'pointer'
+        }}>+ NEW TASK</button>
+      </div>
+      <div className="card">
+        {filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>No tasks. Add one above.</div>
+        )}
+        {filtered.sort((a, b) => a.time.localeCompare(b.time)).map(task => (
+          <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`}>
+            <div className={`task-check ${task.done ? 'done' : ''}`} onClick={() => toggleTask(task.id)}>{task.done ? '✓' : ''}</div>
+            <div className="task-info" onClick={() => toggleTask(task.id)}>
+              <div className="task-name">{task.name}</div>
+              <div className="task-meta">
+                <span>{task.time}</span>
+                <span className={`task-tag tag-${task.category}`}>{CATEGORY_LABELS[task.category]}</span>
+                <span>{task.date}</span>
+              </div>
+            </div>
+            <button onClick={() => deleteTask(task.id)}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: '0 8px' }}>✕</button>
+          </div>
+        ))}
+      </div>
+      {showAdd && (
+        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">// ADD NEW TASK</div>
+            <div className="input-group">
+              <label className="input-label">TASK NAME</label>
+              <input className="input-field" placeholder="What do you need to do?" value={newTask.name}
+                onChange={e => setNewTask(p => ({ ...p, name: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addTask()} autoFocus />
+            </div>
+            <div className="input-group">
+              <label className="input-label">CATEGORY</label>
+              <select className="input-select" value={newTask.category} onChange={e => setNewTask(p => ({ ...p, category: e.target.value as Category }))}>
+                <option value="body">💪 Body</option>
+                <option value="mind">📚 Mind</option>
+                <option value="work">⚡ Work</option>
+                <option value="quit">🚭 Quit Smoking</option>
+                <option value="fun">🎮 Fun</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label className="input-label">TIME</label>
+              <input className="input-field" type="time" value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-primary" onClick={addTask}>EXECUTE TASK</button>
+              <button className="btn-secondary" onClick={() => setShowAdd(false)}>CANCEL</button>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      )}
+    </div>
+  );
+}
+
+// ── HABITS SECTION ────────────────────────────────────────────────
+function HabitsSection({ habits, setHabits }: { habits: HabitStat[]; setHabits: React.Dispatch<React.SetStateAction<HabitStat[]>> }) {
+  function toggle(id: Category) {
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, todayDone: !h.todayDone, streak: !h.todayDone ? h.streak + 1 : Math.max(0, h.streak - 1) } : h));
+  }
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <div className="header-title">CyberSched // Habit Tracker</div>
+        <div className="header-greeting">Habit <span>Core</span></div>
+        <div className="header-date">{habits.filter(h => h.todayDone).length}/{habits.length} habits completed today</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+        {habits.map(habit => (
+          <div key={habit.id} className="card" onClick={() => toggle(habit.id)}
+            style={{ borderColor: habit.todayDone ? `${habit.color}40` : undefined, cursor: 'pointer', transition: 'all 0.3s' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+              <div className="habit-ring" style={{ width: 72, height: 72 }}>
+                <HabitRing progress={habit.todayDone ? 100 : habit.weekProgress} color={habit.color} size={72} />
+                <div className="habit-ring-value" style={{ color: habit.color, fontSize: 14 }}>{habit.todayDone ? '✓' : `${habit.weekProgress}%`}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 24, marginBottom: 4 }}>{habit.icon}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: habit.todayDone ? habit.color : 'var(--text-primary)', letterSpacing: 1 }}>{habit.label}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--orange)', marginTop: 2 }}>🔥 {habit.streak} day streak</div>
+              </div>
+            </div>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${habit.weekProgress}%`, background: habit.color }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>
+              <span>Week progress</span><span style={{ color: habit.color }}>{habit.weekProgress}%</span>
+            </div>
+            <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 8, background: habit.todayDone ? `${habit.color}15` : 'var(--bg-secondary)', border: `1px solid ${habit.todayDone ? habit.color + '40' : 'var(--border)'}`, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: habit.todayDone ? habit.color : 'var(--text-muted)', letterSpacing: 2, transition: 'all 0.3s' }}>
+              {habit.todayDone ? '✓ DONE TODAY' : 'CLICK TO MARK DONE'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── STATS SECTION ─────────────────────────────────────────────────
+function StatsSection({ tasks, habits, smokeDays }: { tasks: Task[]; habits: HabitStat[]; smokeDays: number }) {
+  const completed = tasks.filter(t => t.done).length;
+  const total = tasks.length;
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const moneySaved = (smokeDays * 20 * 0.5).toFixed(0);
+  const categoryBreakdown = (['body', 'mind', 'work', 'quit', 'fun'] as Category[]).map(cat => ({
+    cat,
+    total: tasks.filter(t => t.category === cat).length,
+    done: tasks.filter(t => t.category === cat && t.done).length,
+    color: cat === 'body' ? '#00ff88' : cat === 'mind' ? '#00f5ff' : cat === 'work' ? '#ff8c00' : cat === 'quit' ? '#ff3366' : '#9d4edd',
+  }));
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <div className="header-title">CyberSched // Analytics</div>
+        <div className="header-greeting">Progress <span>Report</span></div>
+        <div className="header-date">Real data. Real growth.</div>
+      </div>
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
+        {[
+          { label: 'Overall Completion', value: `${pct}%`, sub: `${completed} of ${total} tasks`, accent: 'var(--cyan)' },
+          { label: 'Days Smoke Free', value: `${smokeDays}`, sub: `$${moneySaved} saved`, accent: 'var(--green)' },
+          { label: 'Best Streak', value: `${Math.max(...habits.map(h => h.streak))}d`, sub: 'consecutive days', accent: 'var(--orange)' },
+          { label: 'Habits Done Today', value: `${habits.filter(h => h.todayDone).length}/${habits.length}`, sub: 'habits completed', accent: 'var(--purple)' },
+        ].map((s, i) => (
+          <div key={i} className="stat-card" style={{ '--accent-color': s.accent } as React.CSSProperties}>
+            <div className="stat-label">{s.label}</div>
+            <div className="stat-value">{s.value}</div>
+            <div className="stat-sub">{s.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div className="card">
+          <div className="card-header"><div className="card-title">// Category Breakdown</div></div>
+          {categoryBreakdown.map(c => (
+            <div key={c.cat} style={{ marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                <span style={{ color: c.color }}>{CATEGORY_LABELS[c.cat]}</span>
+                <span style={{ color: 'var(--text-secondary)' }}>{c.done}/{c.total}</span>
+              </div>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: c.total > 0 ? `${(c.done / c.total) * 100}%` : '0%', background: c.color }} />
+              </div>
+            </div>
+          ))}
         </div>
+        <div className="card">
+          <div className="card-header"><div className="card-title">// Habit Streaks</div></div>
+          {habits.map(h => (
+            <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <span style={{ fontSize: 20 }}>{h.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)', marginBottom: 4 }}>{h.label}</div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${Math.min((h.streak / 30) * 100, 100)}%`, background: h.color }} />
+                </div>
+              </div>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: h.color }}>🔥{h.streak}</span>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{ gridColumn: '1 / -1', border: '1px solid rgba(0,255,136,0.2)' }}>
+          <div className="card-header"><div className="card-title" style={{ color: 'var(--green)' }}>// Quit Smoking Timeline</div></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+            {[
+              { days: 1, label: '24 hrs', desc: 'Heart rate normal', icon: '🫀' },
+              { days: 3, label: '3 days', desc: 'Nicotine cleared', icon: '🧹' },
+              { days: 7, label: '1 week', desc: 'Senses recover', icon: '👃' },
+              { days: 30, label: '1 month', desc: 'Lung capacity+', icon: '🫁' },
+              { days: 90, label: '3 months', desc: 'Circulation full', icon: '⚡' },
+            ].map(ms => (
+              <div key={ms.days} style={{ textAlign: 'center', padding: 16, borderRadius: 10, background: smokeDays >= ms.days ? 'rgba(0,255,136,0.08)' : 'var(--bg-secondary)', border: `1px solid ${smokeDays >= ms.days ? 'rgba(0,255,136,0.3)' : 'var(--border)'}` }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>{ms.icon}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: smokeDays >= ms.days ? 'var(--green)' : 'var(--text-muted)', fontWeight: 700, marginBottom: 4 }}>{ms.label}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>{ms.desc}</div>
+                <div style={{ marginTop: 8, fontSize: 16 }}>{smokeDays >= ms.days ? '✅' : '○'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PLANNER SECTION ───────────────────────────────────────────────
+function PlannerSection() {
+  const weekDates = getWeekDates();
+  const todayIdx = new Date().getDay();
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <div className="header-title">CyberSched // Weekly Planner</div>
+        <div className="header-greeting">Command <span>Grid</span></div>
+        <div className="header-date">Your AI-structured week</div>
+      </div>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-header">
+          <div className="card-title">// This Week</div>
+          <span className="card-action" style={{ color: 'var(--green)' }}>◉ AI-GENERATED</span>
+        </div>
+        <div className="week-grid">
+          {weekDates.map((date, i) => (
+            <div key={i} className="day-col">
+              <div className="day-header">
+                <div className="day-name">{DAYS[date.getDay()]}</div>
+                <div className={`day-num ${date.getDay() === todayIdx ? 'today' : ''}`}>{date.getDate()}</div>
+              </div>
+              {(WEEK_SCHEDULE[i] || []).map((block, j) => (
+                <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+        {[
+          { day: 'Mon / Wed / Fri', title: 'Gym Days', tasks: ['Compound lifts 45min', 'Protein meal post-workout', 'Cold shower'], color: 'var(--green)' },
+          { day: 'Tue / Thu', title: 'Deep Work', tasks: ['2h study block AM', 'Work project PM', 'Read 20 pages evening'], color: 'var(--cyan)' },
+          { day: 'Sat / Sun', title: 'Recovery', tasks: ['Light walk or jog', 'Gaming / social time', 'Weekly review & plan'], color: 'var(--purple)' },
+        ].map((block, i) => (
+          <div key={i} className="card" style={{ borderColor: `${block.color}30` }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: block.color, letterSpacing: 2, marginBottom: 6, textTransform: 'uppercase' as const }}>{block.day}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: block.color, marginBottom: 14, letterSpacing: 1 }}>{block.title}</div>
+            {block.tasks.map((t, j) => (
+              <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>
+                <span style={{ color: block.color, fontSize: 8 }}>◆</span>{t}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── ENGLISH SECTION ───────────────────────────────────────────────
+function EnglishSection() {
+  const [currentWord, setCurrentWord] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const word = ENGLISH_WORDS[currentWord];
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <div className="header-title">CyberSched // English+</div>
+        <div className="header-greeting">Level <span>Up</span></div>
+        <div className="header-date">Build your vocabulary — one word at a time</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div className="card" style={{ border: '1px solid rgba(157,78,221,0.3)' }}>
+          <div className="card-header">
+            <div className="card-title" style={{ color: 'var(--purple)' }}>// Word of the Day</div>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>{currentWord + 1}/{ENGLISH_WORDS.length}</span>
+          </div>
+          <div className="word-card" style={{ marginBottom: 20 }}>
+            <div className="word-main">{word.word}</div>
+            <div className="word-type">{word.type}</div>
+            <div className="word-definition">{word.def}</div>
+            <div className="word-example">{word.example}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-secondary" style={{ flex: 1 }} onClick={() => { setCurrentWord(p => Math.max(0, p - 1)); setRevealed(false); }}>← Prev</button>
+            <button className="btn-primary" style={{ flex: 1 }} onClick={() => { setCurrentWord(p => (p + 1) % ENGLISH_WORDS.length); setRevealed(false); }}>Next →</button>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><div className="card-title">// Practice</div></div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.7 }}>
+            Use <strong style={{ color: 'var(--purple)' }}>{word.word}</strong> in your own sentence:
+          </div>
+          <textarea style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-body)', fontSize: 13, minHeight: 100, outline: 'none', resize: 'vertical' }}
+            placeholder="Write your sentence here..." />
+          <button className="btn-primary" style={{ width: '100%', marginTop: 12 }} onClick={() => setRevealed(true)}>REVEAL EXAMPLE</button>
+          {revealed && (
+            <div style={{ marginTop: 14, padding: 14, background: 'rgba(157,78,221,0.08)', borderRadius: 8, border: '1px solid rgba(157,78,221,0.25)', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+              {word.example}
+            </div>
+          )}
+        </div>
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
+          <div className="card-header"><div className="card-title">// Word Bank</div></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+            {ENGLISH_WORDS.map((w, i) => (
+              <div key={i} onClick={() => { setCurrentWord(i); setRevealed(false); }}
+                style={{ padding: 14, borderRadius: 8, background: currentWord === i ? 'rgba(157,78,221,0.1)' : 'var(--bg-secondary)', border: `1px solid ${currentWord === i ? 'rgba(157,78,221,0.4)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: currentWord === i ? 'var(--purple)' : 'var(--text-primary)', marginBottom: 4 }}>{w.word}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{w.type}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────────
+export default function Dashboard() {
+  const [tasks, setTasks] = useLocalStorage<Task[]>('cybersched-tasks', DEFAULT_TASKS);
+  const [habits, setHabits] = useLocalStorage<HabitStat[]>('cybersched-habits', DEFAULT_HABITS);
+  const [activeNav, setActiveNav] = useState<NavSection>('dashboard');
+  const [smokeDays, setSmokeDays] = useLocalStorage<number>('cybersched-smokedays', 0);
+  const [quitDate, setQuitDate] = useLocalStorage<string>('cybersched-quitdate', '');
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+    // Auto-calculate smoke-free days from quit date
+    if (quitDate) {
+      const days = Math.floor((Date.now() - new Date(quitDate).getTime()) / (1000 * 60 * 60 * 24));
+      setSmokeDays(days);
+    }
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, [quitDate, setSmokeDays]);
+
+  const weekDates = getWeekDates();
+  const todayDayIdx = now ? now.getDay() : new Date().getDay();
+  const completedToday = tasks.filter(t => t.done && t.date === todayStr()).length;
+  const totalToday = tasks.filter(t => t.date === todayStr()).length;
+  const completionPct = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
+  const moneySaved = (smokeDays * 20 * 0.5).toFixed(0);
+
+  function toggleTask(id: string) {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const done = !t.done;
+      if (done) setHabits(h => h.map(hab => hab.id === t.category ? { ...hab, todayDone: true } : hab));
+      return { ...t, done };
+    }));
+  }
+
+  function addTask() {
+    if (!newTask.name.trim()) return;
+    setTasks(prev => [...prev, { id: Date.now().toString(), ...newTask, done: false, date: todayStr() }].sort((a, b) => a.time.localeCompare(b.time)));
+    setNewTask({ name: '', category: 'body', time: '09:00' });
+    setShowAddTask(false);
+  }
+
+  const displayTime = now ? now.toTimeString().slice(0, 8) : '--:--:--';
+  const displayDay = now ? DAYS[now.getDay()] : '';
+  const displayMonth = now ? MONTHS[now.getMonth()] : '';
+  const displayDate = now ? now.getDate() : '';
+  const displayYear = now ? now.getFullYear() : '';
+
+  const NAV_ITEMS = [
+    { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
+    { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
+    { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
+    { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
+    { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
+    { id: 'english' as NavSection, icon: '◉', label: 'English' },
+  ];
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
+
+      {/* SIDEBAR */}
+      <nav className="sidebar">
+        <div className="sidebar-logo">CS<span>:SCHED</span></div>
+        {NAV_ITEMS.map(nav => (
+          <button key={nav.id} className={`nav-item ${activeNav === nav.id ? 'active' : ''}`} onClick={() => setActiveNav(nav.id)}>
+            <span className="nav-icon">{nav.icon}</span>
+            <span className="nav-label">{nav.label}</span>
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button className="nav-item" style={{ color: 'var(--red)' }}>
+          <span className="nav-icon">⊗</span>
+          <span className="nav-label">Settings</span>
+        </button>
+      </nav>
+
+      {/* MAIN CONTENT */}
+      <main style={{ marginLeft: 72, flex: 1, padding: 32, maxWidth: 'calc(100vw - 72px)', minWidth: 0 }}>
+
+        {/* ── DASHBOARD ── */}
+        {activeNav === 'dashboard' && (
+          <>
+            <div className="header">
+              <div>
+                <div className="header-title">CyberSched // Life OS</div>
+                <div className="header-greeting">Welcome back, <span className="cursor-blink">Legend</span></div>
+                <div className="header-date">
+                  {displayDay.toUpperCase()} · {displayMonth} {displayDate}, {displayYear} ·{' '}
+                  <span style={{ color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>{displayTime}</span>
+                </div>
+              </div>
+              <div className="header-right">
+                <div className="streak-badge">🔥 {habits[0].streak} day streak</div>
+                <div className="streak-badge" style={{ color: 'var(--green)', boxShadow: '0 0 20px rgba(0,255,136,0.1)' }}>🚭 {smokeDays} days clean</div>
+              </div>
+            </div>
+
+            <div className="stats-grid">
+              {[
+                { label: "Today's Score", value: `${completionPct}%`, sub: `${completedToday}/${totalToday} tasks done`, icon: '◈', accent: 'var(--cyan)' },
+                { label: 'Smoke Free', value: `${smokeDays}d`, sub: `≈ $${moneySaved} saved`, icon: '🚭', accent: 'var(--green)' },
+                { label: 'Gym Streak', value: `${habits[0].streak}`, sub: 'days consecutive', icon: '💪', accent: 'var(--orange)' },
+                { label: 'Study Streak', value: `${habits[1].streak}`, sub: 'days consecutive', icon: '📚', accent: 'var(--purple)' },
+              ].map((stat, i) => (
+                <div key={i} className="stat-card" style={{ '--accent-color': stat.accent } as React.CSSProperties}>
+                  <div className="stat-label">{stat.label}</div>
+                  <div className="stat-value">{stat.value}</div>
+                  <div className="stat-sub">{stat.sub}</div>
+                  <div className="stat-icon">{stat.icon}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="content-grid">
+              <div className="content-left">
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title">// Habit Core</div>
+                    <span className="card-action">Week {Math.ceil((now?.getDate() ?? 1) / 7)}</span>
+                  </div>
+                  <div className="habits-grid">
+                    {habits.map(habit => (
+                      <div key={habit.id} className="habit-item" onClick={() => setHabits(prev => prev.map(h => h.id === habit.id ? { ...h, todayDone: !h.todayDone } : h))}>
+                        <div className="habit-ring">
+                          <HabitRing progress={habit.todayDone ? 100 : habit.weekProgress} color={habit.color} />
+                          <div className="habit-ring-value" style={{ color: habit.color }}>{habit.todayDone ? '✓' : `${habit.weekProgress}%`}</div>
+                        </div>
+                        <div className="habit-label" style={{ color: habit.todayDone ? habit.color : undefined }}>{habit.icon} {habit.label}</div>
+                        <div className="habit-streak">🔥 {habit.streak}d</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="progress-bar" style={{ marginTop: 16 }}>
+                    <div className="progress-fill" style={{ width: `${completionPct}%`, background: 'linear-gradient(90deg, var(--cyan), var(--green))' }} />
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>Daily completion: {completionPct}%</div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title">{"// Today's Mission"}</div>
+                    <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
+                  </div>
+                  {tasks.filter(t => t.date === todayStr()).sort((a, b) => a.time.localeCompare(b.time)).map(task => (
+                    <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => toggleTask(task.id)}>
+                      <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
+                      <div className="task-info">
+                        <div className="task-name">{task.name}</div>
+                        <div className="task-meta">
+                          <span>{task.time}</span>
+                          <span className={`task-tag tag-${task.category}`}>{CATEGORY_LABELS[task.category]}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button className="add-task-btn" onClick={() => setShowAddTask(true)}>
+                    <span style={{ fontSize: 18, color: 'var(--cyan)' }}>+</span> Add new task...
+                  </button>
+                </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title">// Weekly Command Grid</div>
+                    <span className="card-action">AI-Generated</span>
+                  </div>
+                  <div className="week-grid">
+                    {weekDates.map((date, i) => (
+                      <div key={i} className="day-col">
+                        <div className="day-header">
+                          <div className="day-name">{DAYS[date.getDay()]}</div>
+                          <div className={`day-num ${date.getDay() === todayDayIdx ? 'today' : ''}`}>{date.getDate()}</div>
+                        </div>
+                        {(WEEK_SCHEDULE[i] || []).map((block, j) => (
+                          <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="content-right">
+                <div className="ai-insight">
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--cyan)', letterSpacing: 2, marginBottom: 10 }}>◉ AI INSIGHT</div>
+                  <div className="ai-insight-text">
+                    <strong>Pattern detected:</strong> You complete gym tasks 85% more often on weekdays. Consider lighter activity on weekends to maintain the habit chain.
+                  </div>
+                </div>
+
+                <div className="card" style={{ border: '1px solid rgba(0,255,136,0.2)' }}>
+                  <div className="card-header">
+                    <div className="card-title" style={{ color: 'var(--green)' }}>// Quit Counter</div>
+                  </div>
+                  {!quitDate && (
+                    <div style={{ marginBottom: 16, textAlign: 'center' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, letterSpacing: 1 }}>SET YOUR QUIT DATE</div>
+                      <input type="date" className="input-field"
+                        max={new Date().toISOString().split('T')[0]}
+                        onChange={e => setQuitDate(e.target.value)}
+                        style={{ textAlign: 'center', cursor: 'pointer' }} />
+                    </div>
+                  )}
+                  <div className="smoke-tracker">
+                    <div className="smoke-days">{smokeDays}</div>
+                    <div className="smoke-label">days smoke-free</div>
+                    <div className="smoke-milestones">
+                      {[
+                        { days: 1, name: '24 Hours', desc: 'Heart rate normalizes', icon: '🫀' },
+                        { days: 3, name: '3 Days', desc: 'Nicotine fully cleared', icon: '🧹' },
+                        { days: 7, name: '1 Week', desc: 'Taste & smell improving', icon: '👃' },
+                        { days: 30, name: '1 Month', desc: 'Lung capacity increases', icon: '🫁' },
+                        { days: 90, name: '3 Months', desc: 'Circulation restored', icon: '⚡' },
+                      ].map(ms => (
+                        <div key={ms.days} className={`milestone ${smokeDays >= ms.days ? 'achieved' : ''}`}>
+                          <span className="milestone-icon">{ms.icon}</span>
+                          <div className="milestone-info">
+                            <div className="milestone-name">{ms.name}</div>
+                            <div className="milestone-desc">{ms.desc}</div>
+                          </div>
+                          <span>{smokeDays >= ms.days ? '✅' : '○'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card" style={{ border: '1px solid rgba(157,78,221,0.2)' }}>
+                  <div className="card-header">
+                    <div className="card-title" style={{ color: 'var(--purple)' }}>// Word of the Day</div>
+                  </div>
+                  <div className="word-card">
+                    <div className="word-main">{ENGLISH_WORDS[0].word}</div>
+                    <div className="word-type">{ENGLISH_WORDS[0].type}</div>
+                    <div className="word-definition">{ENGLISH_WORDS[0].def}</div>
+                    <div className="word-example">{ENGLISH_WORDS[0].example}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={setTasks} />}
+        {activeNav === 'habits' && <HabitsSection habits={habits} setHabits={setHabits} />}
+        {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habits} smokeDays={smokeDays} />}
+        {activeNav === 'planner' && <PlannerSection />}
+        {activeNav === 'english' && <EnglishSection />}
       </main>
+
+      {/* ADD TASK MODAL */}
+      {showAddTask && (
+        <div className="modal-overlay" onClick={() => setShowAddTask(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">// ADD NEW TASK</div>
+            <div className="input-group">
+              <label className="input-label">TASK NAME</label>
+              <input className="input-field" placeholder="What do you need to do?" value={newTask.name}
+                onChange={e => setNewTask(p => ({ ...p, name: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addTask()} autoFocus />
+            </div>
+            <div className="input-group">
+              <label className="input-label">CATEGORY</label>
+              <select className="input-select" value={newTask.category} onChange={e => setNewTask(p => ({ ...p, category: e.target.value as Category }))}>
+                <option value="body">💪 Body</option>
+                <option value="mind">📚 Mind</option>
+                <option value="work">⚡ Work</option>
+                <option value="quit">🚭 Quit Smoking</option>
+                <option value="fun">🎮 Fun</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label className="input-label">SCHEDULED TIME</label>
+              <input className="input-field" type="time" value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-primary" onClick={addTask}>EXECUTE TASK</button>
+              <button className="btn-secondary" onClick={() => setShowAddTask(false)}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

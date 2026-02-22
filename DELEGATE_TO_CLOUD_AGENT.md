@@ -1,12 +1,11 @@
-Delegation instructions for cloud agent
-=====================================
+# Delegation instructions for cloud agent
 
-Purpose
--------
+## Purpose
+
 This file contains the minimal steps a cloud agent should perform after pulling the repository.
 
-Steps
------
+## Steps
+
 1. Pull the repository and check out the latest branch.
 2. Install dependencies:
 
@@ -26,7 +25,7 @@ npm run dev
 
 5. (Optional) Build and deploy according to your cloud provider's standard pipeline.
 
-Notes
------
+## Notes
+
 - The hook file updated: `src/hooks/useLocalStorage.ts` — it now waits for hydration before writing to localStorage.
 - If `git push` fails, ensure the agent has proper credentials and remote permissions.
