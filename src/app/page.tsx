@@ -1138,6 +1138,22 @@ function AIChatController({
 }
 
 // ── MAIN APP ──────────────────────────────────────────────────────
+
+function calcWeekProgress(tasks: Task[], category: Category): number {
+  const today = new Date();
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - today.getDay() + i);
+    return d.toISOString().split('T')[0];
+  });
+
+  const daysWithTask = weekDates.filter(date =>
+    tasks.some(t => t.category === category && t.date === date && t.done)
+  ).length;
+
+  return Math.round((daysWithTask / 7) * 100);
+}
+
 export default function Dashboard() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('cybersched-tasks', DEFAULT_TASKS);
   const [habits, setHabits] = useLocalStorage<HabitStat[]>('cybersched-habits', DEFAULT_HABITS);
@@ -1158,6 +1174,13 @@ export default function Dashboard() {
     const percent = Math.min((days / 90) * 100, 100); // 90 day goal
     return { days, hours, minutes, cigarettes, moneySaved, percent };
   })();
+
+  // Auto-update habit week progress from real task completions
+  const habitsWithProgress = habits.map(h => ({
+    ...h,
+    weekProgress: calcWeekProgress(tasks, h.id as Category),
+  }));
+
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
   const [now, setNow] = useState<Date | null>(null);
@@ -1237,7 +1260,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="header-right">
-                <div className="streak-badge">🔥 {habits[0].streak} day streak</div>
+                <div className="streak-badge">🔥 {habitsWithProgress[0].streak} day streak</div>
                 <div className="streak-badge" style={{ color: 'var(--green)', boxShadow: '0 0 20px rgba(0,255,136,0.1)' }}>🚭 {smokeStats.days} days clean</div>
               </div>
             </div>
@@ -1246,8 +1269,8 @@ export default function Dashboard() {
                 {[
                 { label: "Today's Score", value: `${completionPct}%`, sub: `${completedToday}/${totalToday} tasks done`, icon: '◈', accent: 'var(--cyan)' },
                 { label: 'Smoke Free', value: `${smokeStats.days}d`, sub: `≈ $${moneySaved} saved`, icon: '🚭', accent: 'var(--green)' },
-                { label: 'Gym Streak', value: `${habits[0].streak}`, sub: 'days consecutive', icon: '💪', accent: 'var(--orange)' },
-                { label: 'Study Streak', value: `${habits[1].streak}`, sub: 'days consecutive', icon: '📚', accent: 'var(--purple)' },
+                { label: 'Gym Streak', value: `${habitsWithProgress[0].streak}`, sub: 'days consecutive', icon: '💪', accent: 'var(--orange)' },
+                { label: 'Study Streak', value: `${habitsWithProgress[1].streak}`, sub: 'days consecutive', icon: '📚', accent: 'var(--purple)' },
               ].map((stat, i) => (
                 <div key={i} className="stat-card" style={{ '--accent-color': stat.accent } as React.CSSProperties}>
                   <div className="stat-label">{stat.label}</div>
@@ -1266,7 +1289,7 @@ export default function Dashboard() {
                     <span className="card-action">Week {Math.ceil((now?.getDate() ?? 1) / 7)}</span>
                   </div>
                   <div className="habits-grid">
-                    {habits.map(habit => (
+                    {habitsWithProgress.map(habit => (
                       <div key={habit.id} className="habit-item" onClick={() => setHabits(prev => prev.map(h => h.id === habit.id ? { ...h, todayDone: !h.todayDone } : h))}>
                         <div className="habit-ring">
                           <HabitRing progress={habit.todayDone ? 100 : habit.weekProgress} color={habit.color} />
@@ -1330,7 +1353,7 @@ export default function Dashboard() {
                 <AIMotivationCard
                   settings={settings}
                   smokeStats={smokeStats}
-                  gymStreak={habits[0]?.streak || 0}
+                  gymStreak={habitsWithProgress[0]?.streak || 0}
                   completionPct={completionPct}
                   goals=""
                 />
@@ -1360,8 +1383,8 @@ export default function Dashboard() {
         )}
 
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={setTasks} />}
-        {activeNav === 'habits' && <HabitsSection habits={habits} setHabits={setHabits} />}
-        {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habits} quitDate={quitDate} setQuitDate={setQuitDate} smokeStats={smokeStats} />}
+        {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={setHabits} />}
+        {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={setQuitDate} smokeStats={smokeStats} />}
         {activeNav === 'planner' && <PlannerSection />}
         {activeNav === 'english' && <EnglishSection />}
         {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={setSettings} />}
@@ -1403,7 +1426,7 @@ export default function Dashboard() {
       <AIChatController
         tasks={tasks}
         setTasks={setTasks}
-        habits={habits}
+        habits={habitsWithProgress}
         setHabits={setHabits}
         settings={settings}
         setSettings={setSettings}
