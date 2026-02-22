@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 type Category = 'body' | 'mind' | 'work' | 'quit' | 'fun';
@@ -868,6 +868,275 @@ function PomodoroTimer() {
   );
 }
 
+// ── AI CHAT CONTROLLER ────────────────────────────────────────────
+interface ChatMessage {
+  role: 'user' | 'ai';
+  content: string;
+  timestamp: string;
+}
+
+function AIChatController({
+  tasks, setTasks, habits, setHabits, settings, setSettings,
+  quitDate, setQuitDate, setActiveNav,
+}: {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  habits: HabitStat[];
+  setHabits: React.Dispatch<React.SetStateAction<HabitStat[]>>;
+  settings: Settings;
+  setSettings: (s: Settings) => void;
+  quitDate: string;
+  setQuitDate: (d: string) => void;
+  setActiveNav: (n: NavSection) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'ai',
+      content: `Hey ${settings.name}! I'm your CyberSched AI. I can see your full dashboard and control it directly. Try saying "add gym at 7am", "I just studied for 2 hours", "what should I focus on today", or "show my stats".`,
+      timestamp: new Date().toTimeString().slice(0, 5),
+    }
+  ]);
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  function executeActions(actions: { action: string; [key: string]: unknown }[]) {
+    for (const act of actions) {
+      switch (act.action) {
+
+        case 'ADD_TASK': {
+          const t = act.task as { name: string; category: Category; time: string };
+          setTasks(prev => [...prev, {
+            id: Date.now().toString(),
+            name: t.name,
+            category: t.category || 'work',
+            time: t.time || '09:00',
+            done: false,
+            date: todayStr(),
+          }].sort((a, b) => a.time.localeCompare(b.time)));
+          break;
+        }
+
+        case 'COMPLETE_TASK': {
+          const name = (act.taskName as string).toLowerCase();
+          setTasks(prev => prev.map(t =>
+            t.name.toLowerCase().includes(name) ? { ...t, done: true } : t
+          ));
+          break;
+        }
+
+        case 'DELETE_TASK': {
+          const name = (act.taskName as string).toLowerCase();
+          setTasks(prev => prev.filter(t => !t.name.toLowerCase().includes(name)));
+          break;
+        }
+
+        case 'CLEAR_DONE_TASKS': {
+          setTasks(prev => prev.filter(t => !t.done));
+          break;
+        }
+
+        case 'COMPLETE_HABIT': {
+          const id = act.habitId as string;
+          setHabits(prev => prev.map(h =>
+            h.id === id ? { ...h, todayDone: true, streak: h.streak + 1 } : h
+          ));
+          break;
+        }
+
+        case 'RESET_HABIT': {
+          const id = act.habitId as string;
+          setHabits(prev => prev.map(h =>
+            h.id === id ? { ...h, todayDone: false } : h
+          ));
+          break;
+        }
+
+        case 'UPDATE_SETTING': {
+          setSettings({ ...settings, [act.key as string]: act.value });
+          break;
+        }
+
+        case 'NAVIGATE': {
+          setActiveNav(act.section as NavSection);
+          setOpen(false);
+          break;
+        }
+      }
+    }
+  }
+
+  async function sendMessage() {
+    if (!input.trim() || loading) return;
+    const userMsg = input.trim();
+    setInput('');
+
+    setMessages(prev => [...prev, {
+      role: 'user',
+      content: userMsg,
+      timestamp: new Date().toTimeString().slice(0, 5),
+    }]);
+
+    setLoading(true);
+
+    try {
+      const appState = {
+        tasks: tasks.map(t => ({ name: t.name, category: t.category, time: t.time, done: t.done, date: t.date })),
+        habits: habits.map(h => ({ id: h.id, label: h.label, streak: h.streak, todayDone: h.todayDone })),
+        settings: { name: settings.name },
+        smokeFree: { quitDate, daysClean: quitDate ? Math.floor((Date.now() - new Date(quitDate).getTime()) / 86400000) : 0 },
+        today: new Date().toDateString(),
+      };
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, appState }),
+      });
+
+      const data = await res.json();
+
+      if (data.actions?.length > 0) executeActions(data.actions);
+
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: data.message || 'Done.',
+        timestamp: new Date().toTimeString().slice(0, 5),
+      }]);
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: 'Connection error. Check your internet and try again.',
+        timestamp: new Date().toTimeString().slice(0, 5),
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const SUGGESTIONS = [
+    'What should I focus on today?',
+    'I just finished my workout',
+    'Add study session at 3pm',
+    'Show my progress stats',
+    'Clear my completed tasks',
+  ];
+
+  return (
+    <>
+      {/* Floating button */}
+      <button onClick={() => setOpen(o => !o)} style={{
+        position: 'fixed', bottom: 28, right: 28, width: 56, height: 56,
+        borderRadius: '50%', background: open ? 'var(--bg-card)' : 'var(--cyan)',
+        border: `2px solid ${open ? 'var(--border-bright)' : 'var(--cyan)'}`,
+        color: open ? 'var(--cyan)' : '#000',
+        fontSize: 22, cursor: 'pointer', zIndex: 500,
+        boxShadow: '0 0 30px rgba(0,245,255,0.3)',
+        transition: 'all 0.3s',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {open ? '✕' : '◉'}
+      </button>
+
+      {/* Chat panel */}
+      {open && (
+        <div style={{
+          position: 'fixed', bottom: 96, right: 28,
+          width: 380, height: 520,
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-bright)',
+          borderRadius: 16,
+          display: 'flex', flexDirection: 'column',
+          zIndex: 499,
+          boxShadow: '0 0 60px rgba(0,245,255,0.1)',
+          animation: 'slideUp 0.3s cubic-bezier(0.4,0,0.2,1)',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--cyan)', letterSpacing: 2 }}>CYBERSCHED AI</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>Controls your app in real-time</div>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {messages.map((msg, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth: '85%', padding: '10px 14px', borderRadius: msg.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                  background: msg.role === 'user' ? 'var(--cyan)' : 'var(--bg-secondary)',
+                  border: msg.role === 'ai' ? '1px solid var(--border)' : 'none',
+                  color: msg.role === 'user' ? '#000' : 'var(--text-primary)',
+                  fontSize: 13, lineHeight: 1.5,
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  {msg.content}
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 3, paddingInline: 4 }}>{msg.timestamp}</div>
+              </div>
+            ))}
+            {loading && (
+              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[0,1,2].map(i => (
+                      <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--cyan)', animation: `blink 1s ${i * 0.2}s infinite` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Suggestions */}
+          {messages.length <= 1 && (
+            <div style={{ padding: '0 12px 8px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {SUGGESTIONS.map((s, i) => (
+                <button key={i} onClick={() => setInput(s)} style={{
+                  padding: '5px 10px', borderRadius: 20, border: '1px solid var(--border)',
+                  background: 'transparent', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)',
+                  fontSize: 10, cursor: 'pointer', transition: 'all 0.2s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--cyan)'; e.currentTarget.style.color = 'var(--cyan)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input */}
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+            <input
+              style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', color: 'var(--text-primary)', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none' }}
+              placeholder="Tell me what to do..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              onFocus={e => (e.currentTarget.style.borderColor = 'var(--border-bright)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+            />
+            <button onClick={sendMessage} disabled={loading} style={{
+              width: 42, height: 42, borderRadius: 10, background: 'var(--cyan)', border: 'none',
+              color: '#000', fontSize: 16, cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.5 : 1, transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>→</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('cybersched-tasks', DEFAULT_TASKS);
@@ -1130,6 +1399,18 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <AIChatController
+        tasks={tasks}
+        setTasks={setTasks}
+        habits={habits}
+        setHabits={setHabits}
+        settings={settings}
+        setSettings={setSettings}
+        quitDate={quitDate}
+        setQuitDate={setQuitDate}
+        setActiveNav={setActiveNav}
+      />
     </div>
   );
 }
