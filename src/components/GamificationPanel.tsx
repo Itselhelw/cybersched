@@ -38,7 +38,7 @@ export default function GamificationPanel({
           <div className="card-title">🎮 Achievements & Rewards</div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#fbbf24', fontFamily: 'var(--font-mono)' }}>{dailyScore} pts</div>
-            <div style={{ fontSize: 11, color: '#6b6b8a', fontFamily: 'var(--font-mono)' }}>Today's Score</div>
+            <div style={{ fontSize: 11, color: '#6b6b8a', fontFamily: 'var(--font-mono)' }}>Today&apos;s Score</div>
           </div>
         </div>
       </div>
@@ -85,7 +85,7 @@ export default function GamificationPanel({
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ padding: '12px 16px', background: 'rgba(0,255,136,0.1)', borderRadius: 6 }}>
-            <div style={{ color: '#00ff88', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono)', marginBottom: 6 }}>📈 TODAY'S STATS</div>
+            <div style={{ color: '#00ff88', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono)', marginBottom: 6 }}>📈 TODAY&apos;S STATS</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#a0a0c0' }}>
               <div>✅ Tasks: {tasksCompleted}</div>
               <div>🔥 Habits: {habitsCompleted}</div>

@@ -61,7 +61,7 @@ export function generateRecurringTasks(baseTask: Task, startDate: Date, daysAhea
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + daysAhead);
 
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
 
   while (currentDate <= endDate) {
     const shouldInclude = checkRecurrenceMatch(currentDate, startDate, baseTask.recurrence);
