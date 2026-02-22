@@ -432,49 +432,177 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
 function PlannerSection() {
   const weekDates = getWeekDates();
   const todayIdx = new Date().getDay();
+  const [loading, setLoading] = useState(false);
+  const [aiSchedule, setAiSchedule] = useLocalStorage<null | { week: { day: string; theme: string; blocks: { time: string; duration: string; activity: string; category: string; notes: string }[] }[]; weekInsight: string }>('cybersched-ai-schedule', null);
+  const [form, setForm] = useState({ wakeTime: '07:00', sleepTime: '23:00', gymDays: '3', workHours: '4', energyType: 'morning', goals: '' });
+  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState('');
+
+  async function generateSchedule() {
+    if (!form.goals.trim()) { setError('Please describe your goals first.'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.error) { setError(data.error); return; }
+      setAiSchedule(data);
+      setShowForm(false);
+    } catch {
+      setError('Connection failed. Check your API key in .env.local');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const categoryColor: Record<string, string> = {
+    body: '#00ff88', mind: '#00f5ff', work: '#ff8c00', quit: '#ff3366', fun: '#9d4edd',
+  };
+
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <div className="header-title">CyberSched // Weekly Planner</div>
+        <div className="header-title">CyberSched // AI Planner</div>
         <div className="header-greeting">Command <span>Grid</span></div>
-        <div className="header-date">Your AI-structured week</div>
+        <div className="header-date">Your week, designed by AI around your life</div>
       </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-header">
-          <div className="card-title">// This Week</div>
-          <span className="card-action" style={{ color: 'var(--green)' }}>◉ AI-GENERATED</span>
+
+      {/* Generate button */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        <button className="btn-primary" style={{ padding: '12px 28px' }} onClick={() => setShowForm(true)}>
+          ◉ GENERATE MY WEEK WITH AI
+        </button>
+        {aiSchedule && (
+          <button className="btn-secondary" onClick={() => setShowForm(true)}>Regenerate</button>
+        )}
+      </div>
+
+      {/* AI Insight */}
+      {aiSchedule?.weekInsight && (
+        <div className="ai-insight" style={{ marginBottom: 24 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--cyan)', letterSpacing: 2, marginBottom: 10 }}>◉ AI WEEK STRATEGY</div>
+          <div className="ai-insight-text">{aiSchedule.weekInsight}</div>
         </div>
-        <div className="week-grid">
-          {weekDates.map((date, i) => (
-            <div key={i} className="day-col">
-              <div className="day-header">
-                <div className="day-name">{DAYS[date.getDay()]}</div>
-                <div className={`day-num ${date.getDay() === todayIdx ? 'today' : ''}`}>{date.getDate()}</div>
+      )}
+
+      {/* AI Generated Schedule */}
+      {aiSchedule ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {aiSchedule.week.map((dayPlan, i) => (
+            <div key={i} className="card">
+              <div className="card-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="card-title">{dayPlan.day.toUpperCase()}</div>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase' }}>{dayPlan.theme}</span>
+                </div>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>{dayPlan.blocks.length} blocks</span>
               </div>
-              {(WEEK_SCHEDULE[i] || []).map((block, j) => (
-                <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
-              ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {dayPlan.blocks.map((block, j) => (
+                  <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: `1px solid ${categoryColor[block.category] || 'var(--border)'}20` }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', minWidth: 50 }}>{block.time}</div>
+                    <div style={{ width: 3, height: '100%', minHeight: 36, borderRadius: 2, background: categoryColor[block.category] || 'var(--border)', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{block.activity}</div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: categoryColor[block.category] || 'var(--text-muted)' }}>{block.duration}</span>
+                        <span className={`task-tag tag-${block.category}`}>{block.category}</span>
+                        {block.notes && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>{block.notes}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-        {[
-          { day: 'Mon / Wed / Fri', title: 'Gym Days', tasks: ['Compound lifts 45min', 'Protein meal post-workout', 'Cold shower'], color: 'var(--green)' },
-          { day: 'Tue / Thu', title: 'Deep Work', tasks: ['2h study block AM', 'Work project PM', 'Read 20 pages evening'], color: 'var(--cyan)' },
-          { day: 'Sat / Sun', title: 'Recovery', tasks: ['Light walk or jog', 'Gaming / social time', 'Weekly review & plan'], color: 'var(--purple)' },
-        ].map((block, i) => (
-          <div key={i} className="card" style={{ borderColor: `${block.color}30` }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: block.color, letterSpacing: 2, marginBottom: 6, textTransform: 'uppercase' as const }}>{block.day}</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: block.color, marginBottom: 14, letterSpacing: 1 }}>{block.title}</div>
-            {block.tasks.map((t, j) => (
-              <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>
-                <span style={{ color: block.color, fontSize: 8 }}>◆</span>{t}
+      ) : (
+        // Fallback static grid
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">// Default Week View</div>
+            <span className="card-action">Click Generate to use AI</span>
+          </div>
+          <div className="week-grid">
+            {weekDates.map((date, i) => (
+              <div key={i} className="day-col">
+                <div className="day-header">
+                  <div className="day-name">{DAYS[date.getDay()]}</div>
+                  <div className={`day-num ${date.getDay() === todayIdx ? 'today' : ''}`}>{date.getDate()}</div>
+                </div>
+                {(WEEK_SCHEDULE[i] || []).map((block, j) => (
+                  <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
+                ))}
               </div>
             ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* FORM MODAL */}
+      {showForm && (
+        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+          <div className="modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-title">◉ AI SCHEDULE GENERATOR</div>
+
+            {error && (
+              <div style={{ padding: 12, borderRadius: 8, background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)', color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: 12, marginBottom: 16 }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="input-group">
+                <label className="input-label">WAKE UP TIME</label>
+                <input className="input-field" type="time" value={form.wakeTime} onChange={e => setForm(p => ({ ...p, wakeTime: e.target.value }))} />
+              </div>
+              <div className="input-group">
+                <label className="input-label">SLEEP TIME</label>
+                <input className="input-field" type="time" value={form.sleepTime} onChange={e => setForm(p => ({ ...p, sleepTime: e.target.value }))} />
+              </div>
+              <div className="input-group">
+                <label className="input-label">GYM DAYS / WEEK</label>
+                <select className="input-select" value={form.gymDays} onChange={e => setForm(p => ({ ...p, gymDays: e.target.value }))}>
+                  {['1','2','3','4','5','6'].map(n => <option key={n} value={n}>{n} days</option>)}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">WORK/STUDY HOURS</label>
+                <select className="input-select" value={form.workHours} onChange={e => setForm(p => ({ ...p, workHours: e.target.value }))}>
+                  {['2','3','4','5','6','7','8'].map(n => <option key={n} value={n}>{n} hours/day</option>)}
+                </select>
+              </div>
+              <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="input-label">ENERGY TYPE</label>
+                <select className="input-select" value={form.energyType} onChange={e => setForm(p => ({ ...p, energyType: e.target.value }))}>
+                  <option value="morning">🌅 Morning person — peak energy AM</option>
+                  <option value="evening">🌙 Night owl — peak energy PM</option>
+                  <option value="balanced">⚡ Balanced — consistent energy</option>
+                </select>
+              </div>
+              <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="input-label">YOUR GOALS THIS WEEK</label>
+                <textarea className="input-field" rows={3}
+                  style={{ resize: 'vertical' }}
+                  placeholder="e.g. Pass my math exam, build gym habit, stay smoke-free, finish work project, improve English..."
+                  value={form.goals}
+                  onChange={e => setForm(p => ({ ...p, goals: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-primary" onClick={generateSchedule} disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
+                {loading ? '◉ GENERATING...' : '◉ GENERATE MY WEEK'}
+              </button>
+              <button className="btn-secondary" onClick={() => setShowForm(false)}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
