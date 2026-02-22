@@ -1,0 +1,53 @@
+{
+  "name": "CyberSched - Life OS",
+  "short_name": "CyberSched",
+  "description": "Transform your life with CyberSched - your AI-powered personal OS for goals, habits, and self-improvement",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a1a",
+  "theme_color": "#00f5ff",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%2300f5ff' width='192' height='192'/><text x='96' y='120' font-size='80' font-weight='bold' text-anchor='middle' fill='%230a0a1a' font-family='monospace'>CS</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%2300f5ff' width='180' height='180'/><text x='90' y='115' font-size='70' font-weight='bold' text-anchor='middle' fill='%230a0a1a' font-family='monospace'>CS</text></svg>",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%230a0a1a' width='540' height='720'/><rect fill='%2300f5ff' y='0' width='540' height='100'/><text x='270' y='60' font-size='40' font-weight='bold' text-anchor='middle' fill='%230a0a1a' font-family='monospace'>CyberSched</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": [
+    "productivity",
+    "lifestyle"
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Task",
+      "short_name": "Task",
+      "description": "Quickly add a new task",
+      "url": "/?section=tasks",
+      "icons": []
+    },
+    {
+      "name": "Complete Habit",
+      "short_name": "Habit",
+      "description": "Track your daily habits",
+      "url": "/?section=habits",
+      "icons": []
+    }
+  ]
+}

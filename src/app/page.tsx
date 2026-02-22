@@ -2,9 +2,19 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
+import CloudSyncUI from '@/components/CloudSyncUI';
+import { AdvancedTaskForm } from '@/components/AdvancedTaskForm';
+import AISummaryCard from '@/components/AISummaryCard';
+import GamificationPanel from '@/components/GamificationPanel';
+import HabitManagementPanel from '@/components/HabitManagementPanel';
+import NotificationCenter from '@/components/NotificationCenter';
+import { exportTasksToCSV, exportHabitsToCSV, exportAllDataToCSV, exportDataToPDF, getWeeklyProgressData, getCategoryBreakdown, getStreakHistory, getCompletionStats } from '@/utils/exportUtils';
+import { getPriorityColor, getPriorityLabel, sortTasksByPriority, expandRecurringInTaskList, toggleSubtask, addSubtask, removeSubtask, getSubtaskProgress, logTime, getTimeStats, formatTime, getTimeColor } from '@/utils/taskUtils';
+import { calculateDailyPoints, checkAchievements, BADGES, type Achievement } from '@/utils/gamificationUtils';
 
 type Category = 'body' | 'mind' | 'work' | 'quit' | 'fun';
-type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'english' | 'settings';
+type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'english' | 'analytics' | 'settings';
 
 interface Settings {
   name: string;
@@ -29,16 +39,30 @@ interface Task {
   time: string;
   done: boolean;
   date: string;
+  priority?: 'low' | 'medium' | 'high';
+  isRecurring?: boolean;
+  recurrence?: 'daily' | 'weekly' | 'monthly';
+  subtasks?: Subtask[];
+  estimatedTime?: number;
+  actualTime?: number;
+}
+
+interface Subtask {
+  id: string;
+  name: string;
+  done: boolean;
 }
 
 interface HabitStat {
-  id: Category;
+  id: Category | string;
   label: string;
   icon: string;
   color: string;
   streak: number;
   todayDone: boolean;
   weekProgress: number;
+  isCustom?: boolean;
+  journalEntry?: { text: string; mood: string; date: string };
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -156,20 +180,51 @@ function TasksSection({ tasks, setTasks }: { tasks: Task[]; setTasks: React.Disp
           <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>No tasks. Add one above.</div>
         )}
         {filtered.sort((a, b) => a.time.localeCompare(b.time)).map(task => (
-          <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`}>
-            <div className={`task-check ${task.done ? 'done' : ''}`} onClick={() => toggleTask(task.id)}>{task.done ? '✓' : ''}</div>
-            <div className="task-info" onClick={() => toggleTask(task.id)}>
-              <div className="task-name">{task.name}</div>
-              <div className="task-meta">
-                <span>{task.time}</span>
-                <span className={`task-tag tag-${task.category}`}>{CATEGORY_LABELS[task.category]}</span>
-                <span>{task.date}</span>
+          <div key={task.id} style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Main Task Row */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div className={`task-check ${task.done ? 'done' : ''}`} onClick={() => toggleTask(task.id)} style={{ marginTop: 2 }}>{task.done ? '✓' : ''}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div className="task-name" onClick={() => toggleTask(task.id)} style={{ textDecoration: task.done ? 'line-through' : 'none', cursor: 'pointer' }}>{task.name}</div>
+                  {task.priority && (
+                    <span style={{ padding: '2px 8px', background: getPriorityColor(task.priority), color: '#0a0a1a', borderRadius: 4, fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{getPriorityLabel(task.priority)}</span>
+                  )}
+                  {task.isRecurring && (
+                    <span style={{ padding: '2px 8px', background: 'rgba(0,255,136,0.2)', color: '#00ff88', borderRadius: 4, fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>↻ {(task.recurrence || 'daily').toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="task-meta">
+                  <span>{task.time}</span>
+                  <span className={`task-tag tag-${task.category}`}>{CATEGORY_LABELS[task.category]}</span>
+                  {task.estimatedTime && (
+                    <span style={{ color: getTimeColor(task), fontFamily: 'var(--font-mono)', fontSize: 12 }}>⏱️ {formatTime(task.actualTime || 0)}/{formatTime(task.estimatedTime)}</span>
+                  )}
+                  <span>{task.date}</span>
+                </div>
               </div>
+              <button onClick={() => deleteTask(task.id)}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: '0 8px' }}>✕</button>
             </div>
-            <button onClick={() => deleteTask(task.id)}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: '0 8px' }}>✕</button>
+
+            {/* Subtasks */}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <div style={{ marginLeft: 32, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {task.subtasks.map(subtask => (
+                  <div key={subtask.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 13, color: '#a0a0c0' }}>
+                    <input
+                      type="checkbox"
+                      checked={subtask.done}
+                      onChange={() => setTasks(prev => prev.map(t => t.id === task.id ? { ...t, subtasks: t.subtasks?.map(st => st.id === subtask.id ? { ...st, done: !st.done } : st) } : t))}
+                      style={{ cursor: 'pointer', width: 14, height: 14 }}
+                    />
+                    <span style={{ textDecoration: subtask.done ? 'line-through' : 'none', color: subtask.done ? '#6b6b8a' : '#a0a0c0' }}>☑️ {subtask.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -213,6 +268,28 @@ function HabitsSection({ habits, setHabits }: { habits: HabitStat[]; setHabits: 
   function toggle(id: Category) {
     setHabits(prev => prev.map(h => h.id === id ? { ...h, todayDone: !h.todayDone, streak: !h.todayDone ? h.streak + 1 : Math.max(0, h.streak - 1) } : h));
   }
+
+  const handleAddHabit = (newHabit: any) => {
+    setHabits(prev => [...prev, {
+      id: newHabit.id as Category,
+      label: newHabit.label,
+      icon: newHabit.icon,
+      color: newHabit.color,
+      streak: 0,
+      todayDone: false,
+      weekProgress: 0,
+      isCustom: true,
+    }]);
+  };
+
+  const handleDeleteHabit = (habitId: string) => {
+    setHabits(prev => prev.filter(h => h.id !== habitId));
+  };
+
+  const handleUpdateHabit = (habitId: string, updates: any) => {
+    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
+  };
+
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
@@ -220,9 +297,21 @@ function HabitsSection({ habits, setHabits }: { habits: HabitStat[]; setHabits: 
         <div className="header-greeting">Habit <span>Core</span></div>
         <div className="header-date">{habits.filter(h => h.todayDone).length}/{habits.length} habits completed today</div>
       </div>
+
+      {/* Habit Management */}
+      <div style={{ marginBottom: 28, padding: 20, background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)' }}>
+        <HabitManagementPanel
+          habits={habits}
+          onAddHabit={handleAddHabit}
+          onDeleteHabit={handleDeleteHabit}
+          onUpdateHabit={handleUpdateHabit}
+        />
+      </div>
+
+      {/* Habit Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         {habits.map(habit => (
-          <div key={habit.id} className="card" onClick={() => toggle(habit.id)}
+          <div key={habit.id} className="card" onClick={() => toggle(habit.id as Category)}
             style={{ borderColor: habit.todayDone ? `${habit.color}40` : undefined, cursor: 'pointer', transition: 'all 0.3s' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
               <div className="habit-ring" style={{ width: 72, height: 72 }}>
@@ -440,6 +529,117 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
           smokeStats={smokeStats}
         />
       </div>
+    </div>
+  );
+}
+
+// ── ANALYTICS SECTION ──────────────────────────────────────────────
+function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: HabitStat[]; settings: Settings; smokeStats: { days: number; moneySaved: string } }) {
+  const [loading, setLoading] = useState(false);
+
+  const weeklyData = getWeeklyProgressData(tasks);
+  const categoryData = getCategoryBreakdown(tasks);
+  const streakData = getStreakHistory(habits);
+  const completionStats = getCompletionStats(tasks);
+
+  async function handleExportPDF() {
+    setLoading(true);
+    try {
+      await exportDataToPDF(tasks, habits, settings, smokeStats);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <div className="header-title">CyberSched // Analytics</div>
+        <div className="header-greeting">Data <span>Insights</span></div>
+        <div className="header-date">Track your progress across all categories and habits</div>
+      </div>
+
+      {/* Export Buttons */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
+        <button
+          onClick={() => exportTasksToCSV(tasks)}
+          style={{
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, #00ff88, #00cc6a)',
+            color: '#0a0a1a',
+            border: 'none',
+            borderRadius: 8,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontFamily: 'var(--font-mono)',
+            transition: 'all 0.3s',
+          }}
+        >
+          📥 Tasks CSV
+        </button>
+        <button
+          onClick={() => exportHabitsToCSV(habits)}
+          style={{
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, #00f5ff, #0099cc)',
+            color: '#0a0a1a',
+            border: 'none',
+            borderRadius: 8,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontFamily: 'var(--font-mono)',
+            transition: 'all 0.3s',
+          }}
+        >
+          📥 Habits CSV
+        </button>
+        <button
+          onClick={() => exportAllDataToCSV(tasks, habits)}
+          style={{
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, #ff8c00, #ff6600)',
+            color: '#0a0a1a',
+            border: 'none',
+            borderRadius: 8,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontFamily: 'var(--font-mono)',
+            transition: 'all 0.3s',
+          }}
+        >
+          📥 All Data CSV
+        </button>
+        <button
+          onClick={handleExportPDF}
+          disabled={loading}
+          style={{
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, #ff3366, #cc1a4d)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            fontWeight: 700,
+            cursor: loading ? 'default' : 'pointer',
+            fontSize: 13,
+            fontFamily: 'var(--font-mono)',
+            opacity: loading ? 0.6 : 1,
+            transition: 'all 0.3s',
+          }}
+        >
+          {loading ? '⏳ PDF...' : '📄 PDF Report'}
+        </button>
+      </div>
+
+      {/* Charts */}
+      <CompletionDonut stats={completionStats} />
+      <WeeklyProgressChart data={weeklyData} />
+      <CategoryBreakdownChart data={categoryData} />
+      <StreakRanking data={streakData} />
     </div>
   );
 }
@@ -684,7 +884,7 @@ function EnglishSection() {
 }
 
 // ── SETTINGS SECTION ──────────────────────────────────────────────
-function SettingsSection({ settings, setSettings }: { settings: Settings; setSettings: (s: Settings) => void }) {
+function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[]) => void; habits: HabitStat[]; setHabits: (h: HabitStat[]) => void; quitDate: string; setQuitDate: (d: string) => void }) {
   const [edited, setEdited] = useState(false);
   const [form, setForm] = useState(settings);
 
@@ -737,6 +937,26 @@ function SettingsSection({ settings, setSettings }: { settings: Settings; setSet
           <button className="btn-secondary" onClick={() => { setForm(settings); setEdited(false); }}>CANCEL</button>
         </div>
       )}
+
+      {/* Cloud Sync Section */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ marginBottom: 16 }}>
+          <div className="header-title" style={{ fontSize: 16, marginBottom: 4 }}>☁️ Cloud Sync</div>
+          <div className="header-greeting" style={{ fontSize: 12, color: '#6b6b8a' }}>Backup and sync across devices</div>
+        </div>
+        <CloudSyncUI
+          tasks={tasks}
+          habits={habits}
+          settings={settings}
+          quitDate={quitDate}
+          onRestore={(restoredTasks, restoredHabits, restoredSettings, restoredQuitDate) => {
+            setTasks(restoredTasks);
+            setHabits(restoredHabits);
+            setSettings(restoredSettings);
+            setQuitDate(restoredQuitDate);
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -752,10 +972,13 @@ function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goal
   const [motivation, setMotivation] = useLocalStorage<string>('cybersched-motivation', '');
   const [motivDate, setMotivDate] = useLocalStorage<string>('cybersched-motiv-date', '');
   const [loading, setLoading] = useState(false);
+  const hasGenerated = useRef(false);
 
   useEffect(() => {
+    if (hasGenerated.current) return; // prevent double-fire
     const today = todayStr();
     if (motivDate !== today) {
+      hasGenerated.current = true;
       setLoading(true);
       fetch('/api/motivate', {
         method: 'POST',
@@ -775,8 +998,10 @@ function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goal
         })
         .catch(() => setMotivation('Every day smoke-free is a war won. Keep going.'))
         .finally(() => setLoading(false));
+    } else {
+      hasGenerated.current = true; // already generated today, skip
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="ai-insight" style={{ marginBottom: 20 }}>
@@ -1182,14 +1407,29 @@ export default function Dashboard() {
   }));
 
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
   const [now, setNow] = useState<Date | null>(null);
+  const [unlockedAchievements, setUnlockedAchievements] = useLocalStorage<Achievement[]>('cybersched-achievements', []);
+  const [unlockedBadges, setUnlockedBadges] = useLocalStorage<string[]>('cybersched-badges', []);
 
   useEffect(() => {
     setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, [quitDate]);
+
+  // Check for new achievements
+  useEffect(() => {
+    const newAchievements = checkAchievements(
+      tasks,
+      habitsWithProgress,
+      smokeStats,
+      unlockedAchievements
+    );
+
+    if (newAchievements.length > unlockedAchievements.length) {
+      setUnlockedAchievements(newAchievements);
+    }
+  }, [tasks, habitsWithProgress, smokeStats.days]);
 
   const weekDates = getWeekDates();
   const todayDayIdx = now ? now.getDay() : new Date().getDay();
@@ -1207,10 +1447,23 @@ export default function Dashboard() {
     }));
   }
 
-  function addTask() {
-    if (!newTask.name.trim()) return;
-    setTasks(prev => [...prev, { id: Date.now().toString(), ...newTask, done: false, date: todayStr() }].sort((a, b) => a.time.localeCompare(b.time)));
-    setNewTask({ name: '', category: 'body', time: '09:00' });
+  function addTask(taskData: any) {
+    if (!taskData.name.trim()) return;
+    const newTaskObj = {
+      id: Date.now().toString(),
+      name: taskData.name,
+      category: taskData.category,
+      time: taskData.time,
+      priority: taskData.priority || 'medium',
+      isRecurring: taskData.isRecurring || false,
+      recurrence: taskData.recurrence,
+      subtasks: taskData.subtasks || [],
+      estimatedTime: taskData.estimatedTime,
+      actualTime: 0,
+      done: false,
+      date: todayStr(),
+    };
+    setTasks(prev => [...prev, newTaskObj].sort((a, b) => a.time.localeCompare(b.time)));
     setShowAddTask(false);
   }
 
@@ -1220,12 +1473,23 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
+  // Gamification calculations
+  const dailyScore = calculateDailyPoints(
+    completedToday,
+    habitsWithProgress.filter(h => h.todayDone).length,
+    habitsWithProgress.filter(h => h.streak > 0).length
+  );
+  const bestStreak = Math.max(...habitsWithProgress.map(h => h.streak), 0);
+  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter(h => h.weekProgress > 50).length * 50);
+
   const NAV_ITEMS = [
     { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
     { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
     { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
     { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
     { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
+    { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
     { id: 'english' as NavSection, icon: '◉', label: 'English' },
     { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
   ];
@@ -1350,6 +1614,14 @@ export default function Dashboard() {
               </div>
 
               <div className="content-right">
+                <AISummaryCard
+                  tasks={tasks}
+                  habits={habitsWithProgress}
+                  settings={settings}
+                  smokeStats={smokeStats}
+                  weeklyData={getWeeklyProgressData(tasks)}
+                />
+
                 <AIMotivationCard
                   settings={settings}
                   smokeStats={smokeStats}
@@ -1364,6 +1636,16 @@ export default function Dashboard() {
                   quitDate={quitDate}
                   setQuitDate={setQuitDate}
                   smokeStats={smokeStats}
+                />
+
+                <GamificationPanel
+                  tasksCompleted={completedToday}
+                  habitsCompleted={habitsWithProgress.filter(h => h.todayDone).length}
+                  dailyScore={dailyScore}
+                  weeklyScore={weeklyScore}
+                  currentStreak={bestStreak}
+                  unlockedAchievements={unlockedAchievements}
+                  unlockedBadges={BADGES.filter(b => unlockedBadges.includes(b.id))}
                 />
 
                 <div className="card" style={{ border: '1px solid rgba(157,78,221,0.2)' }}>
@@ -1386,39 +1668,19 @@ export default function Dashboard() {
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={setHabits} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={setQuitDate} smokeStats={smokeStats} />}
         {activeNav === 'planner' && <PlannerSection />}
+        {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'english' && <EnglishSection />}
-        {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={setSettings} />}
+        {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={setSettings} tasks={tasks} setTasks={setTasks} habits={habitsWithProgress} setHabits={setHabits} quitDate={quitDate} setQuitDate={setQuitDate} />}
       </main>
 
       {/* ADD TASK MODAL */}
       {showAddTask && (
         <div className="modal-overlay" onClick={() => setShowAddTask(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">// ADD NEW TASK</div>
-            <div className="input-group">
-              <label className="input-label">TASK NAME</label>
-              <input className="input-field" placeholder="What do you need to do?" value={newTask.name}
-                onChange={e => setNewTask(p => ({ ...p, name: e.target.value }))}
-                onKeyDown={e => e.key === 'Enter' && addTask()} autoFocus />
+            <div className="card-header" style={{ marginBottom: 16 }}>
+              <div className="card-title">// Create Advanced Task</div>
             </div>
-            <div className="input-group">
-              <label className="input-label">CATEGORY</label>
-              <select className="input-select" value={newTask.category} onChange={e => setNewTask(p => ({ ...p, category: e.target.value as Category }))}>
-                <option value="body">💪 Body</option>
-                <option value="mind">📚 Mind</option>
-                <option value="work">⚡ Work</option>
-                <option value="quit">🚭 Quit Smoking</option>
-                <option value="fun">🎮 Fun</option>
-              </select>
-            </div>
-            <div className="input-group">
-              <label className="input-label">SCHEDULED TIME</label>
-              <input className="input-field" type="time" value={newTask.time} onChange={e => setNewTask(p => ({ ...p, time: e.target.value }))} />
-            </div>
-            <div className="modal-actions">
-              <button className="btn-primary" onClick={addTask}>EXECUTE TASK</button>
-              <button className="btn-secondary" onClick={() => setShowAddTask(false)}>CANCEL</button>
-            </div>
+            <AdvancedTaskForm onSubmit={addTask} onCancel={() => setShowAddTask(false)} />
           </div>
         </div>
       )}
@@ -1434,6 +1696,8 @@ export default function Dashboard() {
         setQuitDate={setQuitDate}
         setActiveNav={setActiveNav}
       />
+
+      <NotificationCenter tasks={tasks} habits={habitsWithProgress} settings={settings} />
     </div>
   );
 }

@@ -258,3 +258,222 @@ body::before {
   .content-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── RESPONSIVE DESIGN ─────────────────────────────────────── */
+
+/* Mobile: < 640px */
+@media (max-width: 639px) {
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    padding: 8px 0;
+    z-index: 100;
+  }
+  .sidebar:hover { width: 100%; }
+  .sidebar-logo { display: none; }
+  .sidebar-logo span { display: none; }
+  
+  main {
+    margin-left: 0 !important;
+    padding-bottom: 72px;
+    max-width: 100% !important;
+  }
+
+  .nav-item {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+  .nav-label { display: none; }
+  .nav-icon { font-size: 16px; }
+  
+  .header { flex-direction: column; gap: 12px; }
+  .header-right { display: none; }
+  
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .content-grid { grid-template-columns: 1fr !important; }
+  .content-left, .content-right { width: 100%; }
+  
+  .card { margin-bottom: 16px; padding: 16px; }
+  .card-header { flex-direction: column; gap: 8px; }
+  
+  .modal {
+    width: 95vw;
+    max-width: none;
+    padding: 20px;
+  }
+  
+  .modal-title { font-size: 12px; }
+  
+  .input-field, .input-select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px; /* Larger touch targets */
+  }
+  
+  button {
+    min-height: 44px; /* Touch-friendly button size */
+    min-width: 44px;
+  }
+  
+  .btn-primary, .btn-secondary {
+    padding: 14px 16px;
+    font-size: 12px;
+  }
+  
+  .habits-grid { grid-template-columns: 1fr; }
+  .day-col { padding: 8px; }
+  .day-block { padding: 8px; font-size: 11px; }
+  
+  .word-card { padding: 12px; }
+  .word-main { font-size: 16px; }
+  
+  .task-item { padding: 12px; }
+  .task-name { font-size: 13px; }
+  .task-meta { font-size: 11px; gap: 6px; }
+  
+  .stat-card { padding: 16px; }
+  .stat-value { font-size: 24px; }
+  
+  .streak-badge { font-size: 12px; padding: 8px 12px; }
+  
+  .ai-insight { padding: 12px; margin-bottom: 12px; }
+  .ai-insight::before { display: none; }
+  
+  .modal-overlay { align-items: flex-end; }
+  .modal { border-radius: 12px 12px 0 0; width: 100%; max-width: 100%; }
+}
+
+/* Tablet: 640px - 1023px */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .sidebar {
+    width: 72px;
+    position: fixed;
+    top: 0;
+    height: 100vh;
+  }
+  .sidebar:hover { width: 120px; }
+  .nav-label { font-size: 10px; }
+  
+  main {
+    margin-left: 72px;
+    padding: 24px;
+    max-width: calc(100vw - 72px);
+  }
+  
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .content-grid { grid-template-columns: 1fr; }
+  .content-left, .content-right { width: 100%; }
+  
+  .habits-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-card { padding: 18px; }
+  .stat-value { font-size: 28px; }
+  
+  .modal {
+    width: 90vw;
+    max-width: 500px;
+  }
+  
+  button { min-height: 40px; }
+  .input-field, .input-select { padding: 10px 12px; }
+}
+
+/* Desktop: >= 1024px */
+@media (min-width: 1024px) {
+  main {
+    margin-left: 72px;
+    padding: 32px;
+  }
+  
+  .sidebar:hover { width: 200px; }
+  
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+  .content-grid { grid-template-columns: 1fr 380px; gap: 24px; }
+  
+  .habits-grid { grid-template-columns: repeat(5, 1fr); }
+  .stat-card { padding: 20px; }
+  
+  .modal {
+    width: 480px;
+    max-width: 90vw;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 600px) {
+  .sidebar {
+    bottom: auto;
+    top: 0;
+  }
+  
+  main {
+    padding-bottom: 0;
+    padding-top: 0;
+  }
+  
+  .header { margin-bottom: 12px; }
+  .stats-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat-card { padding: 12px; font-size: 12px; }
+  
+  .card { padding: 12px; }
+}
+
+/* High DPI / Retina screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .sidebar { border-right-width: 0.5px; }
+  .card { border-width: 0.5px; }
+  .progress-bar { height: 2px; }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+  button:active {
+    transform: scale(0.98);
+  }
+  
+  .nav-item:active {
+    background: var(--cyan-glow);
+  }
+  
+  .input-field {
+    font-size: 16px; /* Prevent zoom */
+  }
+  
+  .task-check, .habit-item {
+    touch-action: manipulation;
+  }
+}
+
+/* Dark mode preference (already dark by default) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Large screen (4K+) */
+@media (min-width: 1920px) {
+  main {
+    max-width: 2000px;
+    margin: 0 auto;
+    margin-left: 72px;
+  }
+  
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+  .modal {
+    width: 600px;
+  }
+}
