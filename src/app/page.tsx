@@ -817,7 +817,12 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
 }
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-function PlannerSection() {
+function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+  addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
+  notify: (msg: string, color?: string) => void;
+  aiSchedule: any;
+  setAiSchedule: (s: any) => void;
+}) {
   const [now, setNow] = useState<Date | null>(null);
   const weekDates = getWeekDates(now);
   useEffect(() => {
@@ -827,10 +832,9 @@ function PlannerSection() {
   }, []);
   const [loading, setLoading] = useState(false);
   const [germanMonth] = useLocalStorage<number>('german-month', 1);
-  const [aiSchedule, setAiSchedule] = useLocalStorage<null | { week: { day: string; theme: string; blocks: { time: string; duration: string; activity: string; category: string; notes: string }[] }[]; weekInsight: string }>('cybersched-ai-schedule', null);
-  const [form, setForm] = useState({ wakeTime: '07:00', sleepTime: '23:00', gymDays: '3', workHours: '4', energyType: 'morning', goals: '' });
-  const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ wakeTime: '07:00', sleepTime: '23:00', gymDays: '3', workHours: '4', energyType: 'morning', goals: '' });
 
   async function generateSchedule() {
     if (!form.goals.trim()) { setError('Please describe your goals first.'); return; }
@@ -843,9 +847,25 @@ function PlannerSection() {
         body: JSON.stringify({ ...form, germanMonth }),
       });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
       setAiSchedule(data);
       setShowForm(false);
+
+      // Auto-sync today's plan to task manager
+      const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }); // e.g. "Monday"
+      const todayPlan = data.week?.find((day: { day: string }) =>
+        day.day.toLowerCase().includes(todayName.toLowerCase())
+      );
+
+      if (todayPlan?.blocks) {
+        todayPlan.blocks.forEach((block: { time: string; activity: string; category: string }) => {
+          addTask({
+            name: block.activity,
+            category: (block.category as Category) || 'work',
+            time: block.time,
+          });
+        });
+        notify(`📅 ${todayPlan.blocks.length} tasks synced from AI weekly plan!`, 'var(--cyan)');
+      }
     } catch {
       setError('Connection failed. Check your API key in .env.local');
     } finally {
@@ -886,7 +906,7 @@ function PlannerSection() {
       {/* AI Generated Schedule */}
       {aiSchedule ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {aiSchedule.week.map((dayPlan, i) => (
+          {aiSchedule.week.map((dayPlan: any, i: number) => (
             <div key={i} className="card">
               <div className="card-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -896,7 +916,7 @@ function PlannerSection() {
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>{dayPlan.blocks.length} blocks</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {dayPlan.blocks.map((block, j) => (
+                {dayPlan.blocks.map((block: any, j: number) => (
                   <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: `1px solid ${categoryColor[block.category] || 'var(--border)'}20` }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', minWidth: 50 }}>{block.time}</div>
                     <div style={{ width: 3, height: '100%', minHeight: 36, borderRadius: 2, background: categoryColor[block.category] || 'var(--border)', flexShrink: 0 }} />
@@ -1570,7 +1590,11 @@ interface ChatMessage {
 function AIChatController({
   tasks, setTasks, habits, setHabits, settings, setSettings,
   quitDate, setQuitDate, setActiveNav, currentTodayStr, notify,
-  addTask, completeTask, deleteTask, toggleHabit
+  addTask,
+  completeTask,
+  deleteTask,
+  toggleHabit,
+  aiSchedule,
 }: {
   tasks: Task[];
   setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void;
@@ -1587,6 +1611,7 @@ function AIChatController({
   completeTask: (id: string) => void;
   deleteTask: (id: string) => void;
   toggleHabit: (id: string) => void;
+  aiSchedule: any;
 }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -1666,6 +1691,43 @@ function AIChatController({
           setOpen(false);
           break;
         }
+
+        case 'SYNC_TODAY_FROM_PLAN': {
+          const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+          const todayPlan = aiSchedule?.week?.find((day: any) =>
+            day.day.toLowerCase().includes(todayName.toLowerCase())
+          );
+          if (todayPlan?.blocks) {
+            todayPlan.blocks.forEach((block: any) => {
+              setTasks((prev: Task[]) => [...prev, {
+                id: Date.now().toString() + Math.random(),
+                name: block.activity,
+                category: (block.category as Category) || 'work',
+                time: block.time,
+                done: false,
+                date: new Date().toISOString().split('T')[0],
+              }]);
+            });
+            notify(`📅 Today's plan synced to tasks!`, 'var(--cyan)');
+          }
+          break;
+        }
+
+        case 'ADD_TASKS_BULK': {
+          const bulkTasks = act.tasks as { name: string; category: Category; time: string }[];
+          bulkTasks.forEach(t => {
+            setTasks((prev: Task[]) => [...prev, {
+              id: Date.now().toString() + Math.random(),
+              name: t.name,
+              category: t.category || 'work',
+              time: t.time || '09:00',
+              done: false,
+              date: new Date().toISOString().split('T')[0],
+            }]);
+          });
+          notify(`✅ ${bulkTasks.length} tasks added by AI`, 'var(--green)');
+          break;
+        }
       }
     }
   }
@@ -1685,11 +1747,13 @@ function AIChatController({
 
     try {
       const appState = {
-        tasks: tasks.map(t => ({ name: t.name, category: t.category, time: t.time, done: t.done, date: t.date })),
-        habits: habits.map(h => ({ id: h.id, label: h.label, streak: h.streak, todayDone: h.todayDone })),
+        tasks: tasks.map((t: any) => ({ name: t.name, category: t.category, time: t.time, done: t.done, date: t.date })),
+        habits: habits.map((h: any) => ({ id: h.id, label: h.label, streak: h.streak, todayDone: h.todayDone })),
         settings: { name: settings.name },
         smokeFree: { quitDate, daysClean: quitDate ? Math.floor((Date.now() - new Date(quitDate).getTime()) / 86400000) : 0 },
         today: new Date().toDateString(),
+        todayName: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+        weeklyPlan: aiSchedule || null,
       };
 
       const res = await fetch('/api/chat', {
@@ -1841,7 +1905,8 @@ function AIChatController({
 export default function Dashboard() {
   const [now, setNow] = useState<Date | null>(null);
   const app = useAppState(now);
-  const [activeNav, setActiveNav] = useState<NavSection>('dashboard');
+  const [activeNav, setActiveNav] = useLocalStorage<NavSection>('cybersched-nav', 'dashboard');
+  const [aiSchedule, setAiSchedule] = useLocalStorage<any>('cybersched-ai-schedule', null);
   const [showAddTask, setShowAddTask] = useState(false);
 
   useEffect(() => {
@@ -2063,7 +2128,7 @@ export default function Dashboard() {
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={app.setTasksRaw} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
-        {activeNav === 'planner' && <PlannerSection />}
+        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={app.setSettings} tasks={tasks} setTasks={app.setTasksRaw} habits={habitsWithProgress} setHabits={app.setHabitsRaw} quitDate={quitDate} setQuitDate={app.setQuitDate} />}
@@ -2097,6 +2162,7 @@ export default function Dashboard() {
         completeTask={completeTask}
         deleteTask={app.deleteTask}
         toggleHabit={toggleHabit}
+        aiSchedule={aiSchedule}
       />
 
       <NotificationToast notifications={app.notifications} />
