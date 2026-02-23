@@ -1916,22 +1916,23 @@ export default function Dashboard() {
   }, []);
 
   // Auto-refresh at midnight - clears done tasks and adds new day
+  const { setTasksRaw, setHabitsRaw, notify: appNotify } = app;
   useEffect(() => {
     const checkMidnight = () => {
-      const now = new Date();
+      const nowTime = new Date();
       const lastDate = localStorage.getItem('cs-last-active-date');
-      const today = now.toISOString().split('T')[0];
+      const today = nowTime.toISOString().split('T')[0];
 
       if (lastDate && lastDate !== today) {
         // New day detected
         // 1 — Clear yesterday's completed tasks
-        app.setTasksRaw(prev => prev.filter(t => !t.done));
+        setTasksRaw(prev => prev.filter((t: any) => !t.done));
 
         // 2 — Reset habit todayDone flags for new day
-        app.setHabitsRaw(prev => prev.map(h => ({ ...h, todayDone: false })));
+        setHabitsRaw(prev => prev.map((h: any) => ({ ...h, todayDone: false })));
 
         // 3 — Notify user
-        app.notify('🌅 New day started — habits reset, completed tasks cleared!', 'var(--cyan)');
+        appNotify('🌅 New day started — habits reset, completed tasks cleared!', 'var(--cyan)');
       }
 
       localStorage.setItem('cs-last-active-date', today);
@@ -1943,7 +1944,7 @@ export default function Dashboard() {
     // Then check every minute
     const interval = setInterval(checkMidnight, 60000);
     return () => clearInterval(interval);
-  }, [app]);
+  }, [setTasksRaw, setHabitsRaw, appNotify]);
 
   const {
     tasks, habits, habitsWithProgress,
@@ -1962,12 +1963,12 @@ export default function Dashboard() {
   // Gamification calculations
   const dailyScore = calculateDailyPoints(
     completedToday,
-    habitsWithProgress.filter(h => h.todayDone).length,
-    habitsWithProgress.filter(h => h.streak > 0).length
+    habitsWithProgress.filter((h: any) => h.todayDone).length,
+    habitsWithProgress.filter((h: any) => h.streak > 0).length
   );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map(h => h.streak)) : 0;
+  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
   const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter(h => h.weekProgress > 50).length * 50);
+  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
 
   const weekDates = getWeekDates(now);
 
@@ -2012,7 +2013,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="header-right">
-                <div className="streak-badge">🔥 {habitsWithProgress[0].streak} day streak</div>
+                <div className="streak-badge">🔥 {habitsWithProgress[0]?.streak || 0} day streak</div>
                 <div className="streak-badge" style={{ color: 'var(--green)', boxShadow: '0 0 20px rgba(0,255,136,0.1)' }}>🚭 {smokeStats.days} days clean</div>
               </div>
             </div>
@@ -2021,8 +2022,8 @@ export default function Dashboard() {
               {[
                 { label: "Today's Score", value: `${completionPct}%`, sub: `${completedToday}/${totalToday} tasks done`, icon: '◈', accent: 'var(--cyan)' },
                 { label: 'Smoke Free', value: `${smokeStats.days}d`, sub: `≈ $${smokeStats.moneySaved} saved`, icon: '🚭', accent: 'var(--green)' },
-                { label: 'Gym Streak', value: `${habitsWithProgress[0].streak}`, sub: 'days consecutive', icon: '💪', accent: 'var(--orange)' },
-                { label: 'Study Streak', value: `${habitsWithProgress[1].streak}`, sub: 'days consecutive', icon: '📚', accent: 'var(--purple)' },
+                { label: 'Gym Streak', value: `${habitsWithProgress[0]?.streak || 0}`, sub: 'days consecutive', icon: '💪', accent: 'var(--orange)' },
+                { label: 'Study Streak', value: `${habitsWithProgress[1]?.streak || 0}`, sub: 'days consecutive', icon: '📚', accent: 'var(--purple)' },
               ].map((stat, i) => (
                 <div key={i} className="stat-card" style={{ '--accent-color': stat.accent } as React.CSSProperties}>
                   <div className="stat-label">{stat.label}</div>
@@ -2041,7 +2042,7 @@ export default function Dashboard() {
                     <span className="card-action">Week {Math.ceil((now?.getDate() ?? 1) / 7)}</span>
                   </div>
                   <div className="habits-grid">
-                    {habitsWithProgress.map(habit => (
+                    {habitsWithProgress.map((habit: any) => (
                       <div key={habit.id} className="habit-item" onClick={() => toggleHabit(habit.id)}>
                         <div className="habit-ring">
                           <HabitRing progress={habit.todayDone ? 100 : habit.weekProgress} color={habit.color} />
@@ -2063,14 +2064,14 @@ export default function Dashboard() {
                     <div className="card-title">{"// Today's Mission"}</div>
                     <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
                   </div>
-                  {tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a, b) => a.time.localeCompare(b.time)).map(task => (
+                  {tasks.filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a: any, b: any) => a.time.localeCompare(b.time)).map((task: any) => (
                     <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => completeTask(task.id)}>
                       <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
                       <div className="task-info">
                         <div className="task-name">{task.name}</div>
                         <div className="task-meta">
                           <span>{task.time}</span>
-                          <span className={`task-tag tag-${task.category}`}>{CATEGORY_LABELS[task.category]}</span>
+                          <span className={`task-tag tag-${task.category}`}>{CATEGORY_LABELS[task.category as Category]}</span>
                         </div>
                       </div>
                     </div>
@@ -2126,12 +2127,12 @@ export default function Dashboard() {
 
                 <GamificationPanel
                   tasksCompleted={completedToday}
-                  habitsCompleted={habitsWithProgress.filter(h => h.todayDone).length}
+                  habitsCompleted={habitsWithProgress.filter((h: any) => h.todayDone).length}
                   dailyScore={dailyScore}
                   weeklyScore={weeklyScore}
                   currentStreak={bestStreak}
                   unlockedAchievements={unlockedAchievements}
-                  unlockedBadges={BADGES.filter(b => unlockedBadges.includes(b.id))}
+                  unlockedBadges={BADGES.filter((b: any) => unlockedBadges.includes(b.id))}
                 />
 
                 <div className="card" style={{ border: '1px solid var(--green-glow)' }}>

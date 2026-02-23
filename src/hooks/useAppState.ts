@@ -1,5 +1,5 @@
 import { useLocalStorage } from './useLocalStorage';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { checkAchievements, type Achievement } from '@/utils/gamificationUtils';
 
 export type Category = 'body' | 'mind' | 'work' | 'quit' | 'fun';
@@ -251,7 +251,8 @@ export function useAppState(now: Date | null) {
     const smokeStats: SmokeStats = (() => {
         if (!quitDate) return { days: 0, hours: 0, minutes: 0, cigarettes: 0, moneySaved: '0', percent: 0 };
         const base = new Date(quitDate).getTime();
-        const current = now ? now.getTime() : Date.now();
+        // Use a stable date during SSR/initial render to prevent hydration mismatch
+        const current = now ? now.getTime() : new Date('2026-02-23').getTime();
         const diff = Math.max(0, current - base);
         const minutes = Math.floor(diff / 60000);
         const hours = Math.floor(diff / 3600000);
@@ -288,7 +289,8 @@ export function useAppState(now: Date | null) {
         }
     }, [tasks, habits, smokeStats.days, unlockedAchievements, setUnlockedAchievements, notify, now]);
 
-    return {
+    // ── STABILIZE APP OBJECT ──────────────────────────────────────
+    return useMemo(() => ({
         // State
         tasks, habits, settings, quitDate, smokeStats,
         onboarded, eventLog, notifications,
@@ -302,5 +304,16 @@ export function useAppState(now: Date | null) {
         toggleHabit, syncTaskToHabit,
         setQuitDate, setSettings, setOnboarded,
         notify, logEvent,
-    };
+    }), [
+        tasks, habits, settings, quitDate, smokeStats,
+        onboarded, eventLog, notifications,
+        unlockedAchievements, unlockedBadges,
+        todayTasks, completedToday, totalToday, completionPct, currentTodayStr,
+        habitsWithProgress,
+        addTask, completeTask, deleteTask,
+        setTasksRaw, setHabitsRaw,
+        toggleHabit, syncTaskToHabit,
+        setQuitDate, setSettings, setOnboarded,
+        notify, logEvent
+    ]);
 }
