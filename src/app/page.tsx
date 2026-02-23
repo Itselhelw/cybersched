@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
-import CloudSyncUI from '@/components/CloudSyncUI';
 import { AdvancedTaskForm } from '@/components/AdvancedTaskForm';
 import AISummaryCard from '@/components/AISummaryCard';
 import GamificationPanel from '@/components/GamificationPanel';
@@ -950,25 +949,6 @@ function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHa
         </div>
       )}
 
-      {/* Cloud Sync Section */}
-      <div style={{ marginTop: 28 }}>
-        <div style={{ marginBottom: 16 }}>
-          <div className="header-title" style={{ fontSize: 16, marginBottom: 4 }}>☁️ Cloud Sync</div>
-          <div className="header-greeting" style={{ fontSize: 12, color: '#6b6b8a' }}>Backup and sync across devices</div>
-        </div>
-        <CloudSyncUI
-          tasks={tasks}
-          habits={habits}
-          settings={settings}
-          quitDate={quitDate}
-          onRestore={(restoredTasks, restoredHabits, restoredSettings, restoredQuitDate) => {
-            setTasks(restoredTasks);
-            setHabits(restoredHabits);
-            setSettings(restoredSettings);
-            setQuitDate(restoredQuitDate);
-          }}
-        />
-      </div>
     </div>
   );
 }
