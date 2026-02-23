@@ -32,19 +32,28 @@ export default function AISummaryCard({ tasks, habits, smokeDays }: {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/motivate', {
+      const res = await fetch('/api/weekly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'Legend',
+          tasks,
+          habits,
           smokeDays,
-          gymStreak: habits[0]?.streak ?? 0,
-          completionPct,
         }),
       });
+
       const data = await res.json();
-      setSummary(data.message || '');
-      setTrend('STABLE');
+      // data expected: { insights, recommendations, score, message }
+      if (data.message) setSummary(data.message);
+      else if (Array.isArray(data.insights) && data.insights.length > 0) setSummary(data.insights.join(' '));
+      else setSummary('Review your weekly progress.');
+
+      const score = typeof data.score === 'number' ? data.score : 0;
+      if (score >= 75) setTrend('IMPROVING');
+      else if (score >= 40) setTrend('STABLE');
+      else setTrend('DECLINING');
+
       setLastGenDate(new Date().toDateString());
     } catch {
       setSummary('Keep pushing. Every day of consistency compounds.');
