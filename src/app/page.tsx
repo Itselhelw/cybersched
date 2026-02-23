@@ -1915,6 +1915,36 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, []);
 
+  // Auto-refresh at midnight - clears done tasks and adds new day
+  useEffect(() => {
+    const checkMidnight = () => {
+      const now = new Date();
+      const lastDate = localStorage.getItem('cs-last-active-date');
+      const today = now.toISOString().split('T')[0];
+
+      if (lastDate && lastDate !== today) {
+        // New day detected
+        // 1 — Clear yesterday's completed tasks
+        app.setTasksRaw(prev => prev.filter(t => !t.done));
+
+        // 2 — Reset habit todayDone flags for new day
+        app.setHabitsRaw(prev => prev.map(h => ({ ...h, todayDone: false })));
+
+        // 3 — Notify user
+        app.notify('🌅 New day started — habits reset, completed tasks cleared!', 'var(--cyan)');
+      }
+
+      localStorage.setItem('cs-last-active-date', today);
+    };
+
+    // Check immediately on load
+    checkMidnight();
+
+    // Then check every minute
+    const interval = setInterval(checkMidnight, 60000);
+    return () => clearInterval(interval);
+  }, [app]);
+
   const {
     tasks, habits, habitsWithProgress,
     settings, quitDate, smokeStats,
