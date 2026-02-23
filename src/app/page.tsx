@@ -1617,9 +1617,7 @@ export default function Dashboard() {
                 <AISummaryCard
                   tasks={tasks}
                   habits={habitsWithProgress}
-                  settings={settings}
-                  smokeStats={smokeStats}
-                  weeklyData={getWeeklyProgressData(tasks)}
+                  smokeDays={smokeStats.days}
                 />
 
                 <AIMotivationCard
