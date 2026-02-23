@@ -66,7 +66,7 @@ interface HabitStat {
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CATEGORY_LABELS: Record<Category, string> = { body: 'Body', mind: 'Mind', work: 'Work', quit: 'Quit', fun: 'Fun' };
 
 const ENGLISH_WORDS = [
@@ -89,10 +89,12 @@ const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }
   6: [{ label: 'Walk', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Game', color: '#9d4edd', bg: 'rgba(157,78,221,0.12)' }],
 };
 
-function todayStr() { return typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''; }
+function todayStr(baseDate?: Date | null) {
+  return baseDate ? baseDate.toISOString().split('T')[0] : '';
+}
 
-function getWeekDates() {
-  const today = new Date();
+function getWeekDates(baseDate?: Date | null) {
+  const today = baseDate || new Date('2026-02-23'); // Fallback to a stable date for both SSR and initial client pass
   const day = today.getDay();
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
@@ -125,8 +127,8 @@ function HabitRing({ progress, color, size = 56 }: { progress: number; color: st
   const dash = (progress / 100) * circ;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4}
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={4}
         strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
         style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
     </svg>
@@ -134,7 +136,7 @@ function HabitRing({ progress, color, size = 56 }: { progress: number; color: st
 }
 
 // ── TASKS SECTION ─────────────────────────────────────────────────
-function TasksSection({ tasks, setTasks }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>> }) {
+function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<Category | 'all'>('all');
   const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
@@ -143,7 +145,7 @@ function TasksSection({ tasks, setTasks }: { tasks: Task[]; setTasks: React.Disp
   function deleteTask(id: string) { setTasks(prev => prev.filter(t => t.id !== id)); }
   function addTask() {
     if (!newTask.name.trim()) return;
-    setTasks(prev => [...prev, { id: Date.now().toString(), ...newTask, done: false, date: todayStr() }].sort((a, b) => a.time.localeCompare(b.time)));
+    setTasks(prev => [...prev, { id: Date.now().toString(), ...newTask, done: false, date: currentTodayStr || new Date().toISOString().split('T')[0] }].sort((a, b) => a.time.localeCompare(b.time)));
     setNewTask({ name: '', category: 'body', time: '09:00' });
     setShowAdd(false);
   }
@@ -346,13 +348,18 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
   setQuitDate: (d: string) => void;
   smokeStats: { days: number; hours: number; minutes: number; cigarettes: number; moneySaved: string; percent: number };
 }) {
+  const [maxDate, setMaxDate] = useState('');
+
+  useEffect(() => {
+    setMaxDate(new Date().toISOString().split('T')[0]);
+  }, []);
   const milestones = [
-    { days: 1,  label: '24 Hours',  desc: 'Heart rate normalizes',     icon: '🫀' },
-    { days: 3,  label: '3 Days',    desc: 'Nicotine fully cleared',     icon: '🧹' },
-    { days: 7,  label: '1 Week',    desc: 'Taste & smell improving',    icon: '👃' },
-    { days: 14, label: '2 Weeks',   desc: 'Circulation improves',       icon: '💓' },
-    { days: 30, label: '1 Month',   desc: 'Lung capacity increases',    icon: '🫁' },
-    { days: 90, label: '3 Months',  desc: 'Circulation fully restored', icon: '⚡' },
+    { days: 1, label: '24 Hours', desc: 'Heart rate normalizes', icon: '🫀' },
+    { days: 3, label: '3 Days', desc: 'Nicotine fully cleared', icon: '🧹' },
+    { days: 7, label: '1 Week', desc: 'Taste & smell improving', icon: '👃' },
+    { days: 14, label: '2 Weeks', desc: 'Circulation improves', icon: '💓' },
+    { days: 30, label: '1 Month', desc: 'Lung capacity increases', icon: '🫁' },
+    { days: 90, label: '3 Months', desc: 'Circulation fully restored', icon: '⚡' },
   ];
 
   const nextMilestone = milestones.find(m => m.days > smokeStats.days);
@@ -380,7 +387,7 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
             Enter the date you stopped smoking.<br />Your counter starts from that moment.
           </div>
           <input type="date" className="input-field"
-            max={typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''}
+            max={maxDate}
             onChange={e => e.target.value && setQuitDate(e.target.value)}
             style={{ textAlign: 'center', cursor: 'pointer', maxWidth: 200, margin: '0 auto' }} />
         </div>
@@ -646,8 +653,8 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
 function PlannerSection() {
-  const weekDates = getWeekDates();
   const [now, setNow] = useState<Date | null>(null);
+  const weekDates = getWeekDates(now);
   useEffect(() => {
     setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -751,10 +758,10 @@ function PlannerSection() {
           <div className="week-grid">
             {weekDates.map((date, i) => (
               <div key={i} className="day-col">
-                  <div className="day-header">
-                    <div className="day-name">{DAYS[date.getDay()]}</div>
-                    <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
-                  </div>
+                <div className="day-header">
+                  <div className="day-name">{DAYS[date.getDay()]}</div>
+                  <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
+                </div>
                 {(WEEK_SCHEDULE[i] || []).map((block, j) => (
                   <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
                 ))}
@@ -788,13 +795,13 @@ function PlannerSection() {
               <div className="input-group">
                 <label className="input-label">GYM DAYS / WEEK</label>
                 <select className="input-select" value={form.gymDays} onChange={e => setForm(p => ({ ...p, gymDays: e.target.value }))}>
-                  {['1','2','3','4','5','6'].map(n => <option key={n} value={n}>{n} days</option>)}
+                  {['1', '2', '3', '4', '5', '6'].map(n => <option key={n} value={n}>{n} days</option>)}
                 </select>
               </div>
               <div className="input-group">
                 <label className="input-label">WORK/STUDY HOURS</label>
                 <select className="input-select" value={form.workHours} onChange={e => setForm(p => ({ ...p, workHours: e.target.value }))}>
-                  {['2','3','4','5','6','7','8'].map(n => <option key={n} value={n}>{n} hours/day</option>)}
+                  {['2', '3', '4', '5', '6', '7', '8'].map(n => <option key={n} value={n}>{n} hours/day</option>)}
                 </select>
               </div>
               <div className="input-group" style={{ gridColumn: '1 / -1' }}>
@@ -1107,7 +1114,7 @@ interface ChatMessage {
 
 function AIChatController({
   tasks, setTasks, habits, setHabits, settings, setSettings,
-  quitDate, setQuitDate, setActiveNav,
+  quitDate, setQuitDate, setActiveNav, currentTodayStr,
 }: {
   tasks: Task[];
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
@@ -1118,6 +1125,7 @@ function AIChatController({
   quitDate: string;
   setQuitDate: (d: string) => void;
   setActiveNav: (n: NavSection) => void;
+  currentTodayStr: string;
 }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -1135,7 +1143,7 @@ function AIChatController({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  function executeActions(actions: { action: string; [key: string]: unknown }[]) {
+  function executeActions(actions: { action: string;[key: string]: unknown }[]) {
     for (const act of actions) {
       switch (act.action) {
 
@@ -1147,7 +1155,7 @@ function AIChatController({
             category: t.category || 'work',
             time: t.time || '09:00',
             done: false,
-            date: todayStr(),
+            date: currentTodayStr || new Date().toISOString().split('T')[0],
           }].sort((a, b) => a.time.localeCompare(b.time)));
           break;
         }
@@ -1316,7 +1324,7 @@ function AIChatController({
               <div style={{ display: 'flex', alignItems: 'flex-start' }}>
                 <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    {[0,1,2].map(i => (
+                    {[0, 1, 2].map(i => (
                       <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--cyan)', animation: `blink 1s ${i * 0.2}s infinite` }} />
                     ))}
                   </div>
@@ -1436,10 +1444,11 @@ export default function Dashboard() {
     }
   }, [tasks, habitsWithProgress, smokeStats.days]);
 
-  const weekDates = getWeekDates();
-  const todayDayIdx = now ? now.getDay() : new Date().getDay();
-  const completedToday = tasks.filter(t => t.done && t.date === todayStr()).length;
-  const totalToday = tasks.filter(t => t.date === todayStr()).length;
+  const weekDates = getWeekDates(now);
+  const todayDayIdx = now ? now.getDay() : 0;
+  const currentTodayStr = todayStr(now);
+  const completedToday = tasks.filter(t => t.done && (t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''))).length;
+  const totalToday = tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).length;
   const completionPct = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
   const moneySaved = smokeStats.moneySaved;
 
@@ -1466,7 +1475,7 @@ export default function Dashboard() {
       estimatedTime: taskData.estimatedTime,
       actualTime: 0,
       done: false,
-      date: todayStr(),
+      date: currentTodayStr || new Date().toISOString().split('T')[0],
     };
     setTasks(prev => [...prev, newTaskObj].sort((a, b) => a.time.localeCompare(b.time)));
     setShowAddTask(false);
@@ -1535,7 +1544,7 @@ export default function Dashboard() {
             </div>
 
             <div className="stats-grid">
-                {[
+              {[
                 { label: "Today's Score", value: `${completionPct}%`, sub: `${completedToday}/${totalToday} tasks done`, icon: '◈', accent: 'var(--cyan)' },
                 { label: 'Smoke Free', value: `${smokeStats.days}d`, sub: `≈ $${moneySaved} saved`, icon: '🚭', accent: 'var(--green)' },
                 { label: 'Gym Streak', value: `${habitsWithProgress[0].streak}`, sub: 'days consecutive', icon: '💪', accent: 'var(--orange)' },
@@ -1580,7 +1589,7 @@ export default function Dashboard() {
                     <div className="card-title">{"// Today's Mission"}</div>
                     <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
                   </div>
-                  {tasks.filter(t => t.date === todayStr()).sort((a, b) => a.time.localeCompare(b.time)).map(task => (
+                  {tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a, b) => a.time.localeCompare(b.time)).map(task => (
                     <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => toggleTask(task.id)}>
                       <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
                       <div className="task-info">
@@ -1667,7 +1676,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={setTasks} />}
+        {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={setTasks} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={setHabits} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={setQuitDate} smokeStats={smokeStats} />}
         {activeNav === 'planner' && <PlannerSection />}
@@ -1698,6 +1707,7 @@ export default function Dashboard() {
         quitDate={quitDate}
         setQuitDate={setQuitDate}
         setActiveNav={setActiveNav}
+        currentTodayStr={currentTodayStr}
       />
 
       <NotificationCenter tasks={tasks} habits={habitsWithProgress} settings={settings} />
