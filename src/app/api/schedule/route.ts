@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { wakeTime, sleepTime, gymDays, workHours, goals, energyType } = body;
+  const { wakeTime, sleepTime, gymDays, workHours, goals, energyType, germanMonth } = body;
 
   const key = process.env.GROQ_API_KEY;
   if (!key) {
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
 - Work/study hours per day: ${workHours}
 - Energy type: ${energyType}
 - Goals: ${goals}
+- German Learning Month: ${germanMonth || 1}
 
 Return ONLY a valid JSON object. No markdown, no explanation, no code fences. Just raw JSON:
 {
@@ -35,8 +36,7 @@ Rules:
 - category must be one of: body, mind, work, quit, fun
 - Spread gym days, never consecutive
 - Always include quit-smoking support activities
-- Peak cognitive work in peak energy hours
-- Max 1.5h entertainment per day
+- ALWAYS include exactly 2 German study blocks (45m each) per day
 - Include all 7 days`;
 
   try {

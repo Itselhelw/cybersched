@@ -18,15 +18,201 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CATEGORY_LABELS: Record<Category, string> = { body: 'Body', mind: 'Mind', work: 'Work', quit: 'Quit', fun: 'Fun' };
 
-const ENGLISH_WORDS = [
-  { word: 'Resilience', type: 'noun', def: 'The ability to recover quickly from difficulties; toughness.', example: '"Her resilience helped her overcome every setback."' },
-  { word: 'Discipline', type: 'noun', def: 'Training oneself to do something in a controlled and habitual way.', example: '"Discipline is the bridge between goals and accomplishment."' },
-  { word: 'Persevere', type: 'verb', def: 'Continue in a course of action despite difficulty.', example: '"He persevered through the hardest moments."' },
-  { word: 'Momentum', type: 'noun', def: 'The impetus and driving force gained by developing events.', example: '"Build momentum with small wins every day."' },
-  { word: 'Meticulous', type: 'adjective', def: 'Showing great attention to detail; very careful and precise.', example: '"He was meticulous in tracking his progress."' },
-  { word: 'Tenacity', type: 'noun', def: 'The quality of being determined and persistent.', example: '"Her tenacity pushed her past every obstacle."' },
-  { word: 'Acumen', type: 'noun', def: 'The ability to make good judgments and quick decisions.', example: '"His business acumen led to rapid growth."' },
+const GERMAN_ROADMAP = [
+  {
+    month: 1, phase: 'Foundation', level: 'A1',
+    title: 'First Steps',
+    grammar: ['German alphabet & pronunciation (ä, ö, ü, ß)', 'Nouns & grammatical gender (der, die, das)', 'Personal pronouns (ich, du, er, sie, wir...)', 'Present tense: sein & haben', 'Basic word order: Subject–Verb–Object', 'Numbers 1–100'],
+    vocabulary: ['Greetings and farewells', 'Days of the week & months', 'Colors and numbers', 'Family members', 'Common objects at home'],
+    targetWords: 300,
+    resources: [
+      { name: 'DW Nicos Weg Ep. 1–10', url: 'https://learngerman.dw.com/en/nicos-weg/s-56198270', type: 'video' },
+      { name: 'Deutsch für Euch: Gender & Pronouns', url: 'https://youtube.com/@DeutschFuerEuch', type: 'video' },
+      { name: 'Coffee Break German Ep. 1–8', url: 'https://coffeebreaklanguages.com/coffeebreakgerman', type: 'podcast' },
+      { name: 'Anki: German Top 500 Words', url: 'https://ankiweb.net/shared/decks', type: 'flashcard' },
+      { name: 'Duolingo German Basics', url: 'https://duolingo.com', type: 'app' },
+    ],
+    dailyTasks: ['15 min Anki flashcard review', '20 min DW Nicos Weg episode', '15 min Coffee Break German podcast', '10 min shadowing: repeat phrases out loud'],
+    checkpoint: ['Introduce yourself in 5–6 sentences', 'Know 300+ words', 'Recognize all German sounds'],
+  },
+  {
+    month: 2, phase: 'Foundation', level: 'A1',
+    title: 'Basic Grammar',
+    grammar: ['Nominative and Accusative cases', 'Definite & indefinite articles (der/die/das, ein/eine)', 'Plural forms of nouns (8 patterns)', 'Regular & irregular present tense verbs', 'Modal verbs: können, wollen, müssen', 'Negation with nicht and kein'],
+    vocabulary: ['Food and drink', 'Shopping and prices', 'Body parts', 'Adjectives: big, small, good, bad', 'Common verbs: eat, drink, go, come, buy'],
+    targetWords: 600,
+    resources: [
+      { name: 'Deutsch für Euch: Cases Playlist', url: 'https://youtube.com/@DeutschFuerEuch', type: 'video' },
+      { name: 'DW Nicos Weg Ep. 11–25', url: 'https://learngerman.dw.com', type: 'video' },
+      { name: 'Schubert-Verlag A1 Worksheets', url: 'https://schubert-verlag.de', type: 'worksheet' },
+      { name: 'Slow German Podcast Ep. 1–5', url: 'https://slowgerman.com', type: 'podcast' },
+    ],
+    dailyTasks: ['15 min Anki review', '20 min Nicos Weg episode', '15 min modal verbs practice', '10 min write shopping dialogue'],
+    checkpoint: ['Order food and shop in German', 'Understand nominative & accusative cases', 'Know 600+ words'],
+  },
+  {
+    month: 3, phase: 'Foundation', level: 'A1',
+    title: 'Sentences Take Shape',
+    grammar: ['Dative case (geben, helfen, gefallen)', 'Common prepositions + case (in, auf, mit, von, zu)', 'Separable verbs (aufmachen, anrufen)', 'Present progressive (gerade)', 'Possessive pronouns (mein, dein, sein)', 'Time expressions: heute, morgen, gestern'],
+    vocabulary: ['Transportation and directions', 'Weather and seasons', 'Home and rooms', 'Hobbies and free time', 'Telling time'],
+    targetWords: 1000,
+    resources: [
+      { name: 'Deutsch Akademie Free Exercises', url: 'https://deutschakademie.de/online-deutschkurs', type: 'exercise' },
+      { name: 'Easy German: Basic Phrases', url: 'https://youtube.com/@EasyGerman', type: 'video' },
+      { name: 'Radio D Season 1 (DW)', url: 'https://learngerman.dw.com/en/radio-d/s-57176312', type: 'podcast' },
+      { name: 'Tandem Language Exchange', url: 'https://tandem.net', type: 'speaking' },
+    ],
+    dailyTasks: ['15 min Anki review', '20 min Easy German video', '15 min Deutsch Akademie exercises', '10 min write daily routine paragraph'],
+    checkpoint: ['Describe daily routine and home', 'Know all 3 cases (nom, acc, dat)', 'Know ~1,000 words', 'Score 70%+ on mock A1 test'],
+  },
+  {
+    month: 4, phase: 'Building', level: 'A2',
+    title: 'Expanding Grammar',
+    grammar: ['Genitive case (basics)', 'Two-way prepositions: accusative vs. dative', 'Comparative & superlative adjectives', 'Past tense: Perfekt with haben & sein', 'Common irregular Perfekt forms', 'Konjunktiv II: würde + infinitive'],
+    vocabulary: ['Work and professions', 'Education and school', 'Health and body', 'Emotions and feelings', 'City life and places'],
+    targetWords: 1400,
+    resources: [
+      { name: 'Learn German with Anja: Perfekt', url: 'https://youtube.com/@LearnGermanWithAnja', type: 'video' },
+      { name: 'Comprehensible German A2', url: 'https://youtube.com/@ComprehensibleGerman', type: 'video' },
+      { name: 'Slow German Ep. 10–20', url: 'https://slowgerman.com', type: 'podcast' },
+      { name: 'Deutsch Akademie: Perfekt Exercises', url: 'https://deutschakademie.de', type: 'exercise' },
+    ],
+    dailyTasks: ['15 min Anki review', '20 min Perfekt tense video', '15 min Comprehensible German A2', '10 min write diary entry in Perfekt'],
+    checkpoint: ['Talk about past events in conversation', 'Know 1,400+ words', 'Understand two-way prepositions'],
+  },
+  {
+    month: 5, phase: 'Building', level: 'A2',
+    title: 'Real Conversations',
+    grammar: ['Simple past (Präteritum) for haben, sein, modals', 'Future tense with werden', 'Reflexive verbs (sich waschen, sich freuen)', 'Relative clauses (Der Mann, der...)', 'Subordinating conjunctions: weil, dass, obwohl, wenn', 'Word order with subordinating conjunctions'],
+    vocabulary: ['Travel and holidays', 'Technology and internet', 'Media and entertainment', 'Nature and environment', 'Money and banking'],
+    targetWords: 1800,
+    resources: [
+      { name: 'Deutsch für Euch: Conjunctions', url: 'https://youtube.com/@DeutschFuerEuch', type: 'video' },
+      { name: 'Easy German: No EN Subtitles', url: 'https://youtube.com/@EasyGerman', type: 'video' },
+      { name: 'Coffee Break German S2 Ep. 1–8', url: 'https://coffeebreaklanguages.com', type: 'podcast' },
+      { name: 'italki Language Partner', url: 'https://italki.com', type: 'speaking' },
+    ],
+    dailyTasks: ['15 min Anki review', '20 min conjunction practice', '15 min Easy German without subtitles', '10 min speaking with language partner'],
+    checkpoint: ['Construct complex sentences with conjunctions', 'Talk about travel and future plans', 'Know ~1,800 words'],
+  },
+  {
+    month: 6, phase: 'Building', level: 'A2',
+    title: 'A2 Consolidation',
+    grammar: ['Adjective endings in all four cases', 'Infinitive constructions: um...zu, ohne...zu', 'Passive voice basics: Das Buch wird gelesen', 'Da-compounds (damit, dafür, darauf)', 'Full A2 grammar review'],
+    vocabulary: ['Food culture and restaurants', 'Political and social basics', 'Sports', 'Science and learning', 'Top 50 German idioms'],
+    targetWords: 2200,
+    resources: [
+      { name: 'DW Langsam Gesprochene Nachrichten', url: 'https://learngerman.dw.com', type: 'podcast' },
+      { name: 'Goethe Institut A2 Sample Tests', url: 'https://goethe.de', type: 'exam' },
+      { name: 'Comprehensible German A2–B1', url: 'https://youtube.com/@ComprehensibleGerman', type: 'video' },
+      { name: 'German Frequency List 1000–2000', url: 'https://ankiweb.net/shared/decks', type: 'flashcard' },
+    ],
+    dailyTasks: ['15 min Anki review', '20 min adjective endings practice', '20 min DW slow news podcast', '10 min write 200-word essay'],
+    checkpoint: ['Pass mock A2 test with 75%+', 'Know ~2,200 words', 'Read simple German texts', 'Hold 5-minute conversation'],
+  },
+  {
+    month: 7, phase: 'Intermediate', level: 'B1',
+    title: 'Going Deeper',
+    grammar: ['Konjunktiv II fully (all verbs)', 'Passive voice: present + past', 'Indirect speech (Konjunktiv I)', 'Extended adjective phrases', 'Noun compounds', 'Participial phrases'],
+    vocabulary: ['German news and current events', 'Philosophy and opinion', 'Literature and culture', 'Abstract concepts: freedom, justice, democracy', 'Academic vocabulary'],
+    targetWords: 2700,
+    resources: [
+      { name: 'Deutsch für Euch: Konjunktiv II', url: 'https://youtube.com/@DeutschFuerEuch', type: 'video' },
+      { name: 'DW News Articles in German', url: 'https://dw.com/de', type: 'reading' },
+      { name: 'Clozemaster B1', url: 'https://clozemaster.com', type: 'exercise' },
+      { name: 'Comprehensible German B1', url: 'https://youtube.com/@ComprehensibleGerman', type: 'video' },
+    ],
+    dailyTasks: ['20 min Clozemaster B1', '20 min Konjunktiv II practice', '15 min read DW German article', '10 min write 250-word opinion piece'],
+    checkpoint: ['Express opinions, wishes & hypotheticals', 'Understand Easy German without subtitles', 'Know ~2,700 words'],
+  },
+  {
+    month: 8, phase: 'Intermediate', level: 'B1',
+    title: 'Real Content Immersion',
+    grammar: ['Verb prefixes: trennbare & untrennbare', 'Genitive case full mastery', 'Advanced relative clauses (wessen, was, wo)', 'Nominalization (das Lesen, das Fahren)', 'Idioms and fixed expressions'],
+    vocabulary: ['Politics and society', 'Economy and work', 'Health and medicine', 'German history basics', 'Phrasal expressions and collocations'],
+    targetWords: 3200,
+    resources: [
+      { name: 'Heute Show (YouTube)', url: 'https://youtube.com/@heuteshow', type: 'video' },
+      { name: 'Slow German Ep. 40–60', url: 'https://slowgerman.com', type: 'podcast' },
+      { name: 'German Wikipedia Articles', url: 'https://de.wikipedia.org', type: 'reading' },
+      { name: 'Clozemaster: B1 Advanced', url: 'https://clozemaster.com', type: 'exercise' },
+    ],
+    dailyTasks: ['30 min Clozemaster advanced', '20 min read German Wikipedia', '20 min Heute Show or Extra 3', '10 min write 300-word news summary'],
+    checkpoint: ['Read German news articles', 'Know ~3,200 words', 'Understand German comedy shows 60%+'],
+  },
+  {
+    month: 9, phase: 'Intermediate', level: 'B1',
+    title: 'B1 Mastery',
+    grammar: ['Full passive voice review', 'Discourse markers (einerseits/andererseits, zunächst)', 'Extended participial constructions', 'Formal vs. informal registers', 'Full subjunctive review'],
+    vocabulary: ['Formal writing vocabulary', 'Legal and administrative basics', 'Science and technology', 'German cultural references', 'Advanced connectors and transitions'],
+    targetWords: 3700,
+    resources: [
+      { name: 'Comprehensible German B1–B2', url: 'https://youtube.com/@ComprehensibleGerman', type: 'video' },
+      { name: 'Readlang: German Articles', url: 'https://readlang.com', type: 'reading' },
+      { name: 'Goethe Institut B1 Sample Papers', url: 'https://goethe.de', type: 'exam' },
+      { name: 'Coffee Break German Season 3', url: 'https://coffeebreaklanguages.com', type: 'podcast' },
+    ],
+    dailyTasks: ['20 min Clozemaster', '20 min Spiegel/Zeit article (Readlang)', '20 min Coffee Break German S3', '10 min write formal email'],
+    checkpoint: ['Pass mock B1 test 70%+', 'Know ~3,700 words', 'Write formal emails', 'Hold 30-min conversations'],
+  },
+  {
+    month: 10, phase: 'Upper-Intermediate', level: 'B2',
+    title: 'Sophistication',
+    grammar: ['Konjunktiv I (reported speech)', 'Advanced subordinating conjunctions: sodass, sofern', 'Gerundive constructions', 'Modal particles: doch, mal, ja, eben, eigentlich', 'Complex sentence building', 'Advanced adjective constructions'],
+    vocabulary: ['Academic writing', 'Philosophical concepts', 'Ethics and morality', 'Advanced idioms and proverbs', 'Regional expressions'],
+    targetWords: 4200,
+    resources: [
+      { name: 'Der Spiegel Online', url: 'https://spiegel.de', type: 'reading' },
+      { name: 'Naturlich Deutsch B2', url: 'https://youtube.com/@NaturlichDeutsch', type: 'video' },
+      { name: 'Deutschlandfunk Nova Podcast', url: 'https://deutschlandfunk.de', type: 'podcast' },
+      { name: 'Clozemaster Advanced', url: 'https://clozemaster.com', type: 'exercise' },
+    ],
+    dailyTasks: ['30 min Clozemaster advanced', '20 min modal particles practice', '20 min Der Spiegel article', '10 min write 400-word argumentative essay'],
+    checkpoint: ['Understand & use modal particles', 'Read quality newspapers', 'Know ~4,200 words'],
+  },
+  {
+    month: 11, phase: 'Upper-Intermediate', level: 'B2',
+    title: 'Near-Fluency Push',
+    grammar: ['Full grammar review & gap-filling', 'Nominalization vs. verb-heavy writing', 'Complex prepositional phrases', 'Advanced word order — Mittelfeld', 'Collocations and register awareness'],
+    vocabulary: ['Word families and derivation (vor-, nach-, über-, um-)', 'Formal register words', 'B2 exam vocabulary', 'Cultural literacy: German films, literature'],
+    targetWords: 4700,
+    resources: [
+      { name: 'Tatort Episodes (YouTube)', url: 'https://youtube.com', type: 'video' },
+      { name: 'Deutschlandfunk Daily Podcast', url: 'https://deutschlandfunk.de', type: 'podcast' },
+      { name: 'DW Documentaries (German)', url: 'https://youtube.com/@DWDocumentary', type: 'video' },
+      { name: 'Telc B2 Sample Tests', url: 'https://telc.net', type: 'exam' },
+    ],
+    dailyTasks: ['30 min mock exam practice', '20 min German film (German subtitles)', '20 min Deutschlandfunk podcast', '10 min write 500-word essay'],
+    checkpoint: ['Complete two full B2 mock tests', 'Know ~4,700 words', 'Write well-structured essays', 'Conversations flow naturally'],
+  },
+  {
+    month: 12, phase: 'Upper-Intermediate', level: 'B2',
+    title: 'B2 Exam Ready',
+    grammar: ['Full B2 grammar consolidation', 'Exam strategy: Reading & Listening', 'Writing: Essays and formal letters', 'Speaking: Opinion giving, agreeing, disagreeing', 'Error pattern analysis'],
+    vocabulary: ['B2 exam high-frequency vocabulary', 'Opinion language: meiner Meinung nach, einerseits...', 'Transition words for essays', 'All previous vocabulary review'],
+    targetWords: 5000,
+    resources: [
+      { name: 'Goethe Institut B2 Sample Papers', url: 'https://goethe.de', type: 'exam' },
+      { name: 'Telc B2 Practice Tests', url: 'https://telc.net', type: 'exam' },
+      { name: 'Deutsch Akademie B2 Tests', url: 'https://deutschakademie.de', type: 'exam' },
+      { name: 'Reverso Context', url: 'https://context.reverso.net', type: 'exercise' },
+    ],
+    dailyTasks: ['45 min full mock exam section', '20 min weak-area grammar drill', '20 min timed essay writing', '15 min speaking practice with partner'],
+    checkpoint: ['Score 70%+ on full B2 practice test', 'Know 5,000+ words', 'Write 500-word essay on abstract topics', 'Sustain 45-min German discussion'],
+  },
 ];
+
+const RESOURCE_ICONS: Record<string, string> = {
+  video: '▶',
+  podcast: '🎧',
+  exercise: '✏️',
+  flashcard: '🃏',
+  reading: '📖',
+  speaking: '🗣️',
+  worksheet: '📄',
+  exam: '📝',
+  app: '📱',
+};
 
 const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }[]> = {
   0: [{ label: 'Rest', color: '#6b6b8a', bg: 'rgba(107,107,138,0.15)' }],
@@ -640,6 +826,7 @@ function PlannerSection() {
     return () => clearInterval(t);
   }, []);
   const [loading, setLoading] = useState(false);
+  const [germanMonth] = useLocalStorage<number>('german-month', 1);
   const [aiSchedule, setAiSchedule] = useLocalStorage<null | { week: { day: string; theme: string; blocks: { time: string; duration: string; activity: string; category: string; notes: string }[] }[]; weekInsight: string }>('cybersched-ai-schedule', null);
   const [form, setForm] = useState({ wakeTime: '07:00', sleepTime: '23:00', gymDays: '3', workHours: '4', energyType: 'morning', goals: '' });
   const [showForm, setShowForm] = useState(false);
@@ -653,7 +840,7 @@ function PlannerSection() {
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, germanMonth }),
       });
       const data = await res.json();
       if (data.error) { setError(data.error); return; }
@@ -814,62 +1001,370 @@ function PlannerSection() {
   );
 }
 
-// ── ENGLISH SECTION ───────────────────────────────────────────────
-function EnglishSection() {
-  const [currentWord, setCurrentWord] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const word = ENGLISH_WORDS[currentWord];
+// ── GERMAN TRANSLATIONS ──────────────────────────────────────────
+const GRAMMAR_ARABIC: Record<string, string> = {
+  'German alphabet & pronunciation (ä, ö, ü, ß)': 'الأبجدية الألمانية والنطق',
+  'Nouns & grammatical gender (der, die, das)': 'الأسماء والجنس النحوي',
+  'Personal pronouns (ich, du, er, sie, wir...)': 'الضمائر الشخصية',
+  'Present tense: sein & haben': 'المضارع: الفعلان sein و haben',
+  'Basic word order: Subject–Verb–Object': 'ترتيب الكلمات: فاعل-فعل-مفعول',
+  'Numbers 1–100': 'الأرقام من ١ إلى ١٠٠',
+  'Nominative and Accusative cases': 'حالة الفاعل والمفعول به',
+  'Definite & indefinite articles (der/die/das, ein/eine)': 'أدوات التعريف والتنكير',
+  'Plural forms of nouns (8 patterns)': 'صيغ الجمع (٨ أنماط)',
+  'Regular & irregular present tense verbs': 'الأفعال المنتظمة وغير المنتظمة في المضارع',
+  'Modal verbs: können, wollen, müssen': 'الأفعال الناقصة: يستطيع، يريد، يجب',
+  'Negation with nicht and kein': 'النفي بـ nicht و kein',
+  'Dative case (geben, helfen, gefallen)': 'حالة المفعول غير المباشر',
+  'Common prepositions + case (in, auf, mit, von, zu)': 'حروف الجر الشائعة مع حالاتها',
+  'Separable verbs (aufmachen, anrufen)': 'الأفعال المنفصلة',
+  'Present progressive (gerade)': 'المضارع المستمر',
+  'Possessive pronouns (mein, dein, sein)': 'ضمائر الملكية',
+  'Time expressions: heute, morgen, gestern': 'تعبيرات الزمن: اليوم، غداً، أمس',
+};
+
+const DAILY_TASKS_ARABIC: Record<string, string> = {
+  '15 min Anki flashcard review': '١٥ دقيقة مراجعة بطاقات Anki',
+  '20 min DW Nicos Weg episode': '٢٠ دقيقة حلقة من Nicos Weg',
+  '15 min Coffee Break German podcast': '١٥ دقيقة بودكاست Coffee Break German',
+  '10 min shadowing: repeat phrases out loud': '١٠ دقيقة تكرار الجمل بصوت عالٍ',
+  '15 min Anki review': '١٥ دقيقة مراجعة Anki',
+  '20 min Nicos Weg episode': '٢٠ دقيقة حلقة Nicos Weg',
+  '15 min modal verbs practice': '١٥ دقيقة تدريب على الأفعال الناقصة',
+  '10 min write shopping dialogue': '١٠ دقيقة كتابة حوار تسوق',
+  '20 min Easy German video': '٢٠ دقيقة فيديو Easy German',
+  '15 min Deutsch Akademie exercises': '١٥ دقيقة تمارين Deutsch Akademie',
+  '10 min write daily routine paragraph': '١٠ دقيقة كتابة فقرة عن روتينك اليومي',
+};
+
+// ── GERMAN SECTION ────────────────────────────────────────────────
+function GermanSection({
+  tasks, addTask, notify,
+}: {
+  tasks: Task[];
+  addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
+  notify: (msg: string, color?: string) => void;
+}) {
+  const [currentMonth, setCurrentMonth] = useLocalStorage<number>('german-month', 1);
+  const [wordsLearned, setWordsLearned] = useLocalStorage<number>('german-words', 0);
+  const [studyStreak, setStudyStreak] = useLocalStorage<number>('german-streak', 0);
+  const [lastStudyDate, setLastStudyDate] = useLocalStorage<string>('german-last-study', '');
+  const [completedTopics, setCompletedTopics] = useLocalStorage<string[]>('german-topics', []);
+  const [activeTab, setActiveTab] = useState<'overview' | 'grammar' | 'resources' | 'tasks'>('overview');
+  const [tasksAddedDate, setTasksAddedDate] = useLocalStorage<string>('german-tasks-date', '');
+
+  const roadmap = GERMAN_ROADMAP[currentMonth - 1];
+  const today = new Date().toISOString().split('T')[0];
+
+  // Auto-add today's German tasks every morning
+  useEffect(() => {
+    if (tasksAddedDate === today) return;
+    const alreadyHasGermanTasks = tasks.some(t =>
+      t.category === 'mind' && roadmap.dailyTasks.some(dt => t.name.includes(dt.slice(8, 20)))
+    );
+    if (!alreadyHasGermanTasks) {
+      const times = ['07:00', '07:20', '07:45', '08:05'];
+      roadmap.dailyTasks.forEach((task, i) => {
+        addTask({ name: `🇩🇪 ${task}`, category: 'mind', time: times[i] || '08:00' });
+      });
+      setTasksAddedDate(today);
+      notify('🇩🇪 German study tasks added for today!', 'var(--cyan)');
+    }
+  }, [today]);
+
+  function markStudied() {
+    if (lastStudyDate === today) return;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const wasYesterday = lastStudyDate === yesterday.toISOString().split('T')[0];
+    setStudyStreak(wasYesterday ? studyStreak + 1 : 1);
+    setLastStudyDate(today);
+    setWordsLearned(w => w + 10);
+    notify('🔥 Study streak updated! +10 words logged', 'var(--green)');
+  }
+
+  function toggleTopic(topic: string) {
+    setCompletedTopics(prev =>
+      prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]
+    );
+  }
+
+  const phaseColors: Record<string, string> = {
+    Foundation: 'var(--green)',
+    Building: 'var(--cyan)',
+    Intermediate: 'var(--orange)',
+    'Upper-Intermediate': 'var(--purple)',
+  };
+  const phaseColor = phaseColors[roadmap.phase] || 'var(--cyan)';
+  const wordProgress = Math.min((wordsLearned / roadmap.targetWords) * 100, 100);
+  const topicsProgress = Math.round((completedTopics.filter(t =>
+    roadmap.grammar.includes(t)).length / roadmap.grammar.length) * 100);
+
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <div className="header-title">CyberSched // English+</div>
-        <div className="header-greeting">Level <span>Up</span></div>
-        <div className="header-date">Build your vocabulary — one word at a time</div>
+      {/* Header */}
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <div className="header-title">CyberSched // German Learning OS</div>
+          <div className="header-greeting">
+            Deutsch <span style={{ color: phaseColor }}>{roadmap.level}</span>
+          </div>
+          <div className="header-date">Month {currentMonth} of 12 — {roadmap.phase} Phase · {roadmap.title}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="btn-secondary" style={{ padding: '8px 14px', fontSize: 11 }}
+            onClick={() => setCurrentMonth(m => Math.max(1, m - 1))} disabled={currentMonth === 1}>← PREV</button>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: phaseColor, padding: '8px 14px', border: `1px solid ${phaseColor}40`, borderRadius: 8 }}>
+            M{currentMonth}
+          </span>
+          <button className="btn-secondary" style={{ padding: '8px 14px', fontSize: 11 }}
+            onClick={() => setCurrentMonth(m => Math.min(12, m + 1))} disabled={currentMonth === 12}>NEXT →</button>
+        </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <div className="card" style={{ border: '1px solid rgba(157,78,221,0.3)' }}>
-          <div className="card-header">
-            <div className="card-title" style={{ color: 'var(--purple)' }}>// Word of the Day</div>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>{currentWord + 1}/{ENGLISH_WORDS.length}</span>
+
+      {/* Stats Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'CURRENT PHASE', value: roadmap.phase, color: phaseColor, sub: roadmap.level },
+          { label: 'WORDS LEARNED', value: wordsLearned.toLocaleString(), color: 'var(--green)', sub: `Target: ${roadmap.targetWords.toLocaleString()}` },
+          { label: 'STUDY STREAK', value: `${studyStreak}d`, color: 'var(--orange)', sub: lastStudyDate === today ? '✓ studied today' : 'not yet today' },
+          { label: 'GRAMMAR DONE', value: `${topicsProgress}%`, color: 'var(--purple)', sub: `${completedTopics.filter(t => roadmap.grammar.includes(t)).length}/${roadmap.grammar.length} topics` },
+        ].map(stat => (
+          <div key={stat.label} className="card" style={{ padding: 16, textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)', letterSpacing: 2, marginBottom: 8 }}>{stat.label}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: stat.color }}>{stat.value}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{stat.sub}</div>
           </div>
-          <div className="word-card" style={{ marginBottom: 20 }}>
-            <div className="word-main">{word.word}</div>
-            <div className="word-type">{word.type}</div>
-            <div className="word-definition">{word.def}</div>
-            <div className="word-example">{word.example}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-secondary" style={{ flex: 1 }} onClick={() => { setCurrentWord(p => Math.max(0, p - 1)); setRevealed(false); }}>← Prev</button>
-            <button className="btn-primary" style={{ flex: 1 }} onClick={() => { setCurrentWord(p => (p + 1) % ENGLISH_WORDS.length); setRevealed(false); }}>Next →</button>
-          </div>
+        ))}
+      </div>
+
+      {/* Word Progress Bar */}
+      <div className="card" style={{ marginBottom: 20, padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Month {currentMonth} Word Target</span>
+          <span style={{ color: 'var(--green)' }}>{wordsLearned} / {roadmap.targetWords} words</span>
         </div>
-        <div className="card">
-          <div className="card-header"><div className="card-title">// Practice</div></div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.7 }}>
-            Use <strong style={{ color: 'var(--purple)' }}>{word.word}</strong> in your own sentence:
-          </div>
-          <textarea style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-body)', fontSize: 13, minHeight: 100, outline: 'none', resize: 'vertical' }}
-            placeholder="Write your sentence here..." />
-          <button className="btn-primary" style={{ width: '100%', marginTop: 12 }} onClick={() => setRevealed(true)}>REVEAL EXAMPLE</button>
-          {revealed && (
-            <div style={{ marginTop: 14, padding: 14, background: 'rgba(157,78,221,0.08)', borderRadius: 8, border: '1px solid rgba(157,78,221,0.25)', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-              {word.example}
-            </div>
-          )}
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${wordProgress}%`, background: phaseColor }} />
         </div>
-        <div className="card" style={{ gridColumn: '1 / -1' }}>
-          <div className="card-header"><div className="card-title">// Word Bank</div></div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-            {ENGLISH_WORDS.map((w, i) => (
-              <div key={i} onClick={() => { setCurrentWord(i); setRevealed(false); }}
-                style={{ padding: 14, borderRadius: 8, background: currentWord === i ? 'rgba(157,78,221,0.1)' : 'var(--bg-secondary)', border: `1px solid ${currentWord === i ? 'rgba(157,78,221,0.4)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: currentWord === i ? 'var(--purple)' : 'var(--text-primary)', marginBottom: 4 }}>{w.word}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{w.type}</div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {(['overview', 'grammar', 'resources', 'tasks'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            padding: '10px 18px', borderRadius: 8, fontFamily: 'var(--font-display)', fontSize: 11,
+            fontWeight: 700, letterSpacing: 2, cursor: 'pointer', transition: 'all 0.2s',
+            background: activeTab === tab ? phaseColor : 'transparent',
+            border: `1px solid ${activeTab === tab ? phaseColor : 'var(--border)'}`,
+            color: activeTab === tab ? '#000' : 'var(--text-secondary)',
+          }}>
+            {tab.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* OVERVIEW TAB */}
+      {activeTab === 'overview' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          {/* Today's Tasks */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>📅 Today's Study Plan</div>
+            {roadmap.dailyTasks.map((task, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: phaseColor, flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-primary)' }}>
+                    🇩🇪 {task}
+                  </div>
+                  {DAILY_TASKS_ARABIC[task] && (
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-muted)', direction: 'rtl', marginTop: 2 }}>
+                      {DAILY_TASKS_ARABIC[task]}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            <button className="btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={markStudied}>
+              {lastStudyDate === today ? '✓ STUDIED TODAY' : 'MARK DAY AS STUDIED'}
+            </button>
+          </div>
+
+          {/* Checkpoint */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>🏁 Month {currentMonth} Checkpoints</div>
+            {roadmap.checkpoint.map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${phaseColor}`, flexShrink: 0, marginTop: 2 }} />
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item}</span>
               </div>
             ))}
           </div>
+
+          {/* Vocabulary Themes */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>📚 Vocabulary Themes This Month</div>
+            {roadmap.vocabulary.map((v, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ color: phaseColor, fontSize: 12 }}>→</span>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-primary)' }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 14 }}>
+              <input type="number" className="input-field" placeholder="Log words learned today (e.g. 15)"
+                style={{ marginBottom: 8 }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt((e.target as HTMLInputElement).value);
+                    if (!isNaN(val) && val > 0) {
+                      setWordsLearned(w => w + val);
+                      (e.target as HTMLInputElement).value = '';
+                      notify(`+${val} words logged!`, 'var(--green)');
+                    }
+                  }
+                }} />
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>Press Enter to log word count</div>
+            </div>
+          </div>
+
+          {/* 12-Month Roadmap Mini */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>🗺️ 12-Month Roadmap</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              {GERMAN_ROADMAP.map(m => (
+                <button key={m.month} onClick={() => setCurrentMonth(m.month)} style={{
+                  padding: '8px 4px', borderRadius: 6, textAlign: 'center', cursor: 'pointer',
+                  border: `1px solid ${m.month === currentMonth ? phaseColors[m.phase] : 'var(--border)'}`,
+                  background: m.month === currentMonth ? `${phaseColors[m.phase]}15` : 'transparent',
+                  transition: 'all 0.2s',
+                }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: m.month === currentMonth ? phaseColors[m.phase] : 'var(--text-secondary)' }}>M{m.month}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{m.level}</div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* GRAMMAR TAB */}
+      {activeTab === 'grammar' && (
+        <div className="card">
+          <div className="card-title" style={{ color: phaseColor, marginBottom: 6 }}>📐 Grammar Topics — Month {currentMonth}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            Click a topic to mark it as completed
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {roadmap.grammar.map((topic, i) => {
+              const done = completedTopics.includes(topic);
+              return (
+                <div key={i} onClick={() => toggleTopic(topic)} style={{
+                  padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
+                  border: `1px solid ${done ? phaseColor + '60' : 'var(--border)'}`,
+                  background: done ? `${phaseColor}10` : 'var(--bg-secondary)',
+                  display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.2s',
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                    border: `2px solid ${done ? phaseColor : 'var(--border)'}`,
+                    background: done ? phaseColor : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, color: '#000', fontWeight: 700,
+                  }}>{done ? '✓' : ''}</div>
+                  <div>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: done ? phaseColor : 'var(--text-primary)', lineHeight: 1.4 }}>
+                      {topic}
+                    </span>
+                    {GRAMMAR_ARABIC[topic] && (
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-muted)', marginTop: 3, direction: 'rtl' }}>
+                        {GRAMMAR_ARABIC[topic]}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 20, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>
+            {completedTopics.filter(t => roadmap.grammar.includes(t)).length} / {roadmap.grammar.length} topics completed this month
+          </div>
+        </div>
+      )}
+
+      {/* RESOURCES TAB */}
+      {activeTab === 'resources' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {roadmap.resources.map((r, i) => (
+            <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+              <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s', borderColor: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = phaseColor)}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: `${phaseColor}15`, border: `1px solid ${phaseColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                    {RESOURCE_ICONS[r.type] || '🔗'}
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{r.name}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: phaseColor, textTransform: 'uppercase', letterSpacing: 1 }}>{r.type}</div>
+                  </div>
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>↗ Click to open resource</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* TASKS TAB */}
+      {activeTab === 'tasks' && (
+        <div className="card">
+          <div className="card-title" style={{ color: phaseColor, marginBottom: 8 }}>🗓️ Today's German Tasks</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            Tasks below are auto-synced to your main task manager under the Mind category.
+          </div>
+          {tasks.filter(t => t.category === 'mind' && t.name.startsWith('🇩🇪')).length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+              No German tasks for today yet.
+              <br /><br />
+              <button className="btn-primary" onClick={() => {
+                const times = ['07:00', '07:20', '07:45', '08:05'];
+                roadmap.dailyTasks.forEach((task, i) => {
+                  addTask({ name: `🇩🇪 ${task}`, category: 'mind', time: times[i] || '08:00' });
+                });
+                setTasksAddedDate(today);
+                notify('🇩🇪 German tasks added!', 'var(--cyan)');
+              }}>
+                + ADD TODAY'S GERMAN TASKS
+              </button>
+            </div>
+          ) : (
+            tasks.filter(t => t.category === 'mind' && t.name.startsWith('🇩🇪')).map(task => (
+              <div key={task.id} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
+                borderBottom: '1px solid var(--border)',
+                opacity: task.done ? 0.5 : 1,
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                  border: `2px solid ${task.done ? 'var(--green)' : phaseColor}`,
+                  background: task.done ? 'var(--green)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, color: '#000',
+                }}>{task.done ? '✓' : ''}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-primary)', textDecoration: task.done ? 'line-through' : 'none' }}>{task.name}</div>
+                  {DAILY_TASKS_ARABIC[task.name.replace('🇩🇪 ', '')] && (
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-muted)', direction: 'rtl', marginTop: 2 }}>
+                      {DAILY_TASKS_ARABIC[task.name.replace('🇩🇪 ', '')]}
+                    </div>
+                  )}
+                </div>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>{task.time}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1388,7 +1883,7 @@ export default function Dashboard() {
     { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
     { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
     { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
-    { id: 'english' as NavSection, icon: '◉', label: 'English' },
+    { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
     { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
   ];
 
@@ -1544,15 +2039,20 @@ export default function Dashboard() {
                   unlockedBadges={BADGES.filter(b => unlockedBadges.includes(b.id))}
                 />
 
-                <div className="card" style={{ border: '1px solid rgba(157,78,221,0.2)' }}>
+                <div className="card" style={{ border: '1px solid var(--green-glow)' }}>
                   <div className="card-header">
-                    <div className="card-title" style={{ color: 'var(--purple)' }}>// Word of the Day</div>
+                    <div className="card-title" style={{ color: 'var(--green)' }}>// German Progress</div>
                   </div>
-                  <div className="word-card">
-                    <div className="word-main">{ENGLISH_WORDS[0].word}</div>
-                    <div className="word-type">{ENGLISH_WORDS[0].type}</div>
-                    <div className="word-definition">{ENGLISH_WORDS[0].def}</div>
-                    <div className="word-example">{ENGLISH_WORDS[0].example}</div>
+                  <div style={{ padding: '4px 0' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>MONTH {GERMAN_ROADMAP[0].month}: {GERMAN_ROADMAP[0].title.toUpperCase()}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>{GERMAN_ROADMAP[0].phase} Phase</div>
+                    <div className="progress-bar" style={{ height: 6 }}>
+                      <div className="progress-fill" style={{ width: '0%', background: 'var(--green)' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)' }}>
+                      <span>LEVEL: {GERMAN_ROADMAP[0].level}</span>
+                      <span>0 / {GERMAN_ROADMAP[0].targetWords} WORDS</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1565,7 +2065,7 @@ export default function Dashboard() {
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
         {activeNav === 'planner' && <PlannerSection />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
-        {activeNav === 'english' && <EnglishSection />}
+        {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={app.setSettings} tasks={tasks} setTasks={app.setTasksRaw} habits={habitsWithProgress} setHabits={app.setHabitsRaw} quitDate={quitDate} setQuitDate={app.setQuitDate} />}
       </main>
 
