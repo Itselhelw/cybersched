@@ -57,7 +57,7 @@ Rules:
           },
         ],
         temperature: 0.7,
-        max_tokens: 3000,
+        max_tokens: 4000,
       }),
     });
 
@@ -76,23 +76,28 @@ Rules:
     }
 
     try {
-      // Clean the response
       let clean = content
         .replace(/```json/g, '')
         .replace(/```/g, '')
         .trim();
 
-      // Fix unterminated strings — truncate to last valid JSON
+      // Truncate to last valid closing brace if response was cut off
       const lastBrace = clean.lastIndexOf('}');
-      if (lastBrace !== -1) {
-        clean = clean.slice(0, lastBrace + 1);
-      }
+      const lastBracket = clean.lastIndexOf(']');
+      const lastValid = Math.max(lastBrace, lastBracket);
+      if (lastValid !== -1) clean = clean.slice(0, lastValid + 1);
 
-      const schedule = JSON.parse(clean);
-      return NextResponse.json(schedule);
+      // Fix trailing comma issues
+      clean = clean.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+
+      const parsed = JSON.parse(clean);
+      return NextResponse.json(parsed);
     } catch (err) {
-      console.error('Schedule parse failed:', err, 'Raw:', content);
-      return NextResponse.json({ error: 'Failed to generate a valid schedule. Try shortening your goals.' }, { status: 500 });
+      console.error('Schedule parse error:', err);
+      return NextResponse.json({
+        error: 'Failed to parse schedule. Try generating again.',
+        raw: content?.slice(0, 500),
+      }, { status: 500 });
     }
 
   } catch (err) {
