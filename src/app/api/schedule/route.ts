@@ -5,9 +5,7 @@ export async function POST(req: NextRequest) {
   const { wakeTime, sleepTime, gymDays, workHours, goals, energyType, germanMonth } = body;
 
   const key = process.env.GROQ_API_KEY;
-  if (!key) {
-    return NextResponse.json({ error: 'GROQ_API_KEY not found in .env.local' }, { status: 500 });
-  }
+  if (!key) return NextResponse.json({ error: 'GROQ_API_KEY not configured on server' }, { status: 500 });
 
   const prompt = `You are CyberSched, an AI life coach. Generate a 7-day schedule for someone with these details:
 - Wake time: ${wakeTime}
