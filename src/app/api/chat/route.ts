@@ -55,7 +55,7 @@ IMPORTANT: Return ONLY the JSON object. No markdown. No explanation. No code fen
           },
         ],
         temperature: 0.8,
-        max_tokens: 500,
+        max_tokens: 2000,
         response_format: { type: 'json_object' },
       }),
     });
@@ -70,19 +70,30 @@ IMPORTANT: Return ONLY the JSON object. No markdown. No explanation. No code fen
 
     // Try to parse JSON
     try {
-      const parsed = JSON.parse(content);
-      // Ensure message is always a non-empty string
-      if (!parsed.message || parsed.message.trim() === '') {
-        parsed.message = 'Got it! Let me know if you need anything else.';
+      // Clean the response
+      let clean = content
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      // Fix unterminated strings — truncate to last valid JSON
+      const lastBrace = clean.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        clean = clean.slice(0, lastBrace + 1);
       }
+
+      const parsed = JSON.parse(clean);
       return NextResponse.json({
-        message: parsed.message,
+        message: parsed.message || 'Done.',
         actions: Array.isArray(parsed.actions) ? parsed.actions : [],
       });
-    } catch {
-      // If JSON parse fails, return the raw content as the message
-      console.error('JSON parse failed, raw content:', content);
-      return NextResponse.json({ message: content, actions: [] });
+    } catch (err) {
+      console.error('JSON parse failed:', err, 'Raw:', content);
+      // Return raw content as message if JSON fails
+      return NextResponse.json({
+        message: content.slice(0, 300) || 'I had trouble responding. Try again.',
+        actions: [],
+      });
     }
 
   } catch (err) {

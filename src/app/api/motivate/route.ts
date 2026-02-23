@@ -34,8 +34,37 @@ Rules:
       }),
     });
     const data = await response.json();
-    const message = data.choices?.[0]?.message?.content?.trim();
-    return NextResponse.json({ message: message || 'Show up today. That is enough.' });
+    const content = data.choices?.[0]?.message?.content?.trim();
+
+    if (!content) {
+      return NextResponse.json({ message: 'Focus on the work. The results will follow.' });
+    }
+
+    try {
+      // Clean the response
+      let clean = content
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      // Fix unterminated strings — truncate to last valid JSON
+      const lastBrace = clean.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        clean = clean.slice(0, lastBrace + 1);
+      }
+
+      // If it's just raw text and not JSON, this might still fail JSON.parse
+      // but the user asked for this specific wrapper across all routes.
+      try {
+        const parsed = JSON.parse(clean);
+        return NextResponse.json({ message: parsed.message || clean });
+      } catch {
+        return NextResponse.json({ message: content });
+      }
+    } catch (err) {
+      console.error('Motivate parse failed:', err, 'Raw:', content);
+      return NextResponse.json({ message: 'Focus on the work. The results will follow.' });
+    }
   } catch {
     return NextResponse.json({ message: 'Every day smoke-free is a war won. Keep going.' });
   }

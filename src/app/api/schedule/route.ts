@@ -75,9 +75,25 @@ Rules:
       return NextResponse.json({ error: 'Empty response from Groq' }, { status: 500 });
     }
 
-    const clean = content.replace(/```json|```/g, '').trim();
-    const schedule = JSON.parse(clean);
-    return NextResponse.json(schedule);
+    try {
+      // Clean the response
+      let clean = content
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      // Fix unterminated strings — truncate to last valid JSON
+      const lastBrace = clean.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        clean = clean.slice(0, lastBrace + 1);
+      }
+
+      const schedule = JSON.parse(clean);
+      return NextResponse.json(schedule);
+    } catch (err) {
+      console.error('Schedule parse failed:', err, 'Raw:', content);
+      return NextResponse.json({ error: 'Failed to generate a valid schedule. Try shortening your goals.' }, { status: 500 });
+    }
 
   } catch (err) {
     console.error('Schedule error:', err);
