@@ -89,7 +89,7 @@ const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }
   6: [{ label: 'Walk', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Game', color: '#9d4edd', bg: 'rgba(157,78,221,0.12)' }],
 };
 
-function todayStr() { return new Date().toISOString().split('T')[0]; }
+function todayStr() { return typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''; }
 
 function getWeekDates() {
   const today = new Date();
@@ -380,7 +380,7 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
             Enter the date you stopped smoking.<br />Your counter starts from that moment.
           </div>
           <input type="date" className="input-field"
-            max={new Date().toISOString().split('T')[0]}
+            max={typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''}
             onChange={e => e.target.value && setQuitDate(e.target.value)}
             style={{ textAlign: 'center', cursor: 'pointer', maxWidth: 200, margin: '0 auto' }} />
         </div>
@@ -647,7 +647,12 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
 // ── PLANNER SECTION ───────────────────────────────────────────────
 function PlannerSection() {
   const weekDates = getWeekDates();
-  const todayIdx = new Date().getDay();
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [aiSchedule, setAiSchedule] = useLocalStorage<null | { week: { day: string; theme: string; blocks: { time: string; duration: string; activity: string; category: string; notes: string }[] }[]; weekInsight: string }>('cybersched-ai-schedule', null);
   const [form, setForm] = useState({ wakeTime: '07:00', sleepTime: '23:00', gymDays: '3', workHours: '4', energyType: 'morning', goals: '' });
@@ -746,10 +751,10 @@ function PlannerSection() {
           <div className="week-grid">
             {weekDates.map((date, i) => (
               <div key={i} className="day-col">
-                <div className="day-header">
-                  <div className="day-name">{DAYS[date.getDay()]}</div>
-                  <div className={`day-num ${date.getDay() === todayIdx ? 'today' : ''}`}>{date.getDate()}</div>
-                </div>
+                  <div className="day-header">
+                    <div className="day-name">{DAYS[date.getDay()]}</div>
+                    <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
+                  </div>
                 {(WEEK_SCHEDULE[i] || []).map((block, j) => (
                   <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
                 ))}
@@ -1602,7 +1607,7 @@ export default function Dashboard() {
                       <div key={i} className="day-col">
                         <div className="day-header">
                           <div className="day-name">{DAYS[date.getDay()]}</div>
-                          <div className={`day-num ${date.getDay() === todayDayIdx ? 'today' : ''}`}>{date.getDate()}</div>
+                          <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
                         </div>
                         {(WEEK_SCHEDULE[i] || []).map((block, j) => (
                           <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
