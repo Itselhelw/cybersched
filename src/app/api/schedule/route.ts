@@ -7,35 +7,7 @@ export async function POST(req: NextRequest) {
   const key = process.env.GROQ_API_KEY;
   if (!key) return NextResponse.json({ error: 'GROQ_API_KEY not configured on server' }, { status: 500 });
 
-  const prompt = `You are CyberSched, an AI life coach. Generate a 7-day schedule for someone with these details:
-- Wake time: ${wakeTime}
-- Sleep time: ${sleepTime}
-- Gym days per week: ${gymDays}
-- Work/study hours per day: ${workHours}
-- Energy type: ${energyType}
-- Goals: ${goals}
-- German Learning Month: ${germanMonth || 1}
 
-Return ONLY a valid JSON object. No markdown, no explanation, no code fences. Just raw JSON:
-{
-  "week": [
-    {
-      "day": "Monday",
-      "theme": "Focus",
-      "blocks": [
-        { "time": "07:00", "duration": "45min", "activity": "Morning workout", "category": "body", "notes": "Start strong" }
-      ]
-    }
-  ],
-  "weekInsight": "One sentence strategy for this week."
-}
-
-Rules:
-- category must be one of: body, mind, work, quit, fun
-- Spread gym days, never consecutive
-- Always include quit-smoking support activities
-- ALWAYS include exactly 2 German study blocks (45m each) per day
-- Include all 7 days`;
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -45,15 +17,58 @@ Rules:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'system',
-            content: 'You are a productivity AI. You only respond with valid JSON. Never use markdown code fences. Never add explanation text.',
+            content: `You are an elite weekly schedule architect. You create highly optimized, realistic weekly schedules that balance productivity with recovery and prevent burnout.
+
+USER PROFILE:
+- Wake time: ${wakeTime}
+- Sleep time: ${sleepTime}  
+- Energy type: ${energyType}
+- Work hours per day: ${workHours}
+- Gym days per week: ${gymDays}
+- Goals: ${goals}
+
+SCHEDULING PRINCIPLES:
+1. Respect biological rhythms — hardest tasks when energy peaks
+2. Never schedule back-to-back heavy focus blocks without a break
+3. Every day needs at least 60 min of genuine free time
+4. Gym days should have lighter mental load
+5. Distribute goals evenly — no topic two days in a row
+6. Build in buffer time — life happens
+7. Sunday is for preparation, not exhaustion
+
+OUTPUT — respond with ONLY this exact JSON structure:
+{
+  "schedule": [
+    {
+      "day": "Monday",
+      "blocks": [
+        {
+          "time": "09:00",
+          "activity": "specific activity name",
+          "category": "body|mind|work|quit|fun",
+          "duration": 60,
+          "notes": "why this is scheduled here"
+        }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Use 24-hour time format
+- Every block needs a specific activity name, not generic labels
+- Notes should explain the scheduling decision
+- Include 7 days: Monday through Sunday
+- Minimum 4 blocks per day, maximum 7
+- Always include meals, breaks, and transition time`,
           },
           {
             role: 'user',
-            content: prompt,
+            content: 'Generate my highly optimized weekly schedule now based on these rules.',
           },
         ],
         temperature: 0.7,

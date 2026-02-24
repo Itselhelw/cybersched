@@ -5,32 +5,43 @@ export async function POST(req: NextRequest) {
   const key = process.env.GROQ_API_KEY;
   if (!key) return NextResponse.json({ error: 'No API key' }, { status: 500 });
 
-  const prompt = `You are CyberSched, a brutal but caring AI life coach. Write a short daily motivational message for ${name}.
-
-Their stats today:
-- Smoke free: ${smokeDays} days
-- Gym streak: ${gymStreak} days  
-- Task completion: ${completionPct}%
-- Their goals: ${goals || 'become the best version of themselves'}
-
-Rules:
-- Max 2 sentences
-- Be direct, specific to their stats, not generic
-- Reference actual numbers when impressive
-- If stats are low, push them hard but with belief
-- Tone: like a coach who genuinely believes in them
-- No emojis
-- Return ONLY the message text, nothing else`;
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a world-class life coach — part Navy SEAL mental trainer, part sports psychologist. You know exactly what to say to push someone forward without breaking them.
+
+USER DATA:
+- Name: ${name}
+- Days smoke-free: ${smokeDays}
+- Gym streak: ${gymStreak} days
+- Task completion: ${completionPct}%
+- Goals: ${goals}
+
+Write exactly 2 sentences of personalized motivation:
+- Sentence 1: Reference one specific stat and reframe it powerfully
+- Sentence 2: Give one precise action they should take in the next 60 minutes
+
+Rules:
+- No emojis
+- No generic phrases like "keep going" or "you got this"
+- Sound like someone who genuinely knows them
+- Be specific to their numbers
+- If completion is low, be direct about it without being cruel
+- If streaks are high, raise the bar for them
+
+Respond with ONLY the two sentences, nothing else.`,
+          },
+          { role: 'user', content: 'Give me my daily push.' },
+        ],
         temperature: 0.9,
-        max_tokens: 100,
+        max_tokens: 150,
       }),
     });
     const data = await response.json();
