@@ -86,16 +86,9 @@ function todayStr(baseDate?: Date | null) {
     return baseDate ? baseDate.toISOString().split('T')[0] : '';
 }
 
-function calcWeekProgress(tasks: Task[], category: Category, now: Date | null): number {
-    if (!now) return 0;
-    const weekDates = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(now);
-        d.setDate(d.getDate() - d.getDay() + i);
-        return d.toISOString().split('T')[0];
-    });
-
+function calcWeekProgress(category: Category, weekDates: string[], doneTaskMap: Set<string>): number {
     const daysWithTask = weekDates.filter(date =>
-        tasks.some(t => t.category === category && t.date === date && t.done)
+        doneTaskMap.has(`${category}:${date}`)
     ).length;
 
     return Math.round((daysWithTask / 7) * 100);
@@ -126,29 +119,29 @@ export function useAppState(now: Date | null) {
     }, [setEventLog]);
 
     // ── HABIT SYNC ────────────────────────────────────────────────
+    // Memoize the daily timestamp to stabilize callbacks and effects
+    const dailyTimestamp = now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0;
+
     const syncTaskToHabit = useCallback((category: Category) => {
-        const currentToday = todayStr(now);
-        if (!currentToday) return;
+        if (!dailyTimestamp) return;
+        const currentToday = todayStr(new Date(dailyTimestamp));
 
         const weekDates = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(now!);
+            const d = new Date(dailyTimestamp);
             d.setDate(d.getDate() - d.getDay() + i);
             return d.toISOString().split('T')[0];
         });
+
+        const doneTaskMap = new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
 
         // Update habits based on current tasks
         setHabitsRaw(prev => prev.map(h => {
             if (h.id !== category) return h;
 
-            const daysWithDone = weekDates.filter(date =>
-                tasks.some(t => t.category === category && t.date === date && t.done)
-            ).length;
-            const weekProgress = Math.round((daysWithDone / 7) * 100);
+            const weekProgress = calcWeekProgress(category, weekDates, doneTaskMap);
 
             const wasAlreadyDone = h.todayDone;
-            const todayDone = tasks.some(t =>
-                t.category === category && t.date === currentToday && t.done
-            );
+            const todayDone = doneTaskMap.has(`${category}:${currentToday}`);
 
             const newStreak = todayDone && !wasAlreadyDone ? h.streak + 1 : (todayDone ? h.streak : h.streak);
             // Note: streak logic might need refinement for "losing" streak if not done, but user focused on increments.
@@ -166,7 +159,7 @@ export function useAppState(now: Date | null) {
                 lastDone: todayDone ? currentToday : h.lastDone,
             };
         }));
-    }, [now, tasks, setHabitsRaw]);
+    }, [dailyTimestamp, tasks, setHabitsRaw]);
 
     // ── TASK ACTIONS ──────────────────────────────────────────────
     const completeTask = useCallback((taskId: string) => {
@@ -188,12 +181,12 @@ export function useAppState(now: Date | null) {
         }
     }, [setTasksRaw, logEvent, notify]);
 
-    // Sync effect when tasks change
+    // Sync effect when tasks change - only sync when tasks or day changes
     useEffect(() => {
-        if (!now) return;
+        if (!dailyTimestamp) return;
         const categories: Category[] = ['body', 'mind', 'work', 'quit', 'fun'];
         categories.forEach(cat => syncTaskToHabit(cat));
-    }, [tasks, now, syncTaskToHabit]);
+    }, [tasks, dailyTimestamp, syncTaskToHabit]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
@@ -248,7 +241,8 @@ export function useAppState(now: Date | null) {
     }, [now, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
 
     // ── SMOKE STATS ───────────────────────────────────────────────
-    const smokeStats: SmokeStats = (() => {
+    // Memoize smoke stats by minute to prevent unnecessary re-renders every second
+    const smokeStats: SmokeStats = useMemo(() => {
         if (!quitDate) return { days: 0, hours: 0, minutes: 0, cigarettes: 0, moneySaved: '0', percent: 0 };
         const base = new Date(quitDate).getTime();
         // Use a stable date during SSR/initial render to prevent hydration mismatch
@@ -262,32 +256,54 @@ export function useAppState(now: Date | null) {
         const moneySaved = (cigarettes * costPerCig).toFixed(2);
         const percent = Math.min((days / 90) * 100, 100);
         return { days, hours, minutes, cigarettes, moneySaved, percent };
-    })();
+    }, [quitDate, now ? Math.floor(now.getTime() / 60000) : null, settings.cigarettesPerDay, settings.costPerPack, settings.cigarettesPerPack]);
 
     // ── COMPUTED STATS ────────────────────────────────────────────
-    const currentTodayStr = todayStr(now);
-    const todayTasks = tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''));
-    const completedToday = todayTasks.filter(t => t.done).length;
-    const totalToday = todayTasks.length;
-    const completionPct = totalToday > 0
-        ? Math.round((completedToday / totalToday) * 100)
-        : 0;
+    // Memoize current today string by date
+    const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
 
-    const habitsWithProgress = habits.map(h => ({
-        ...h,
-        weekProgress: calcWeekProgress(tasks, h.id as Category, now),
-    }));
+    const todayTasks = useMemo(() =>
+        tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')),
+        [tasks, currentTodayStr]
+    );
+
+    const completedToday = useMemo(() => todayTasks.filter(t => t.done).length, [todayTasks]);
+    const totalToday = useMemo(() => todayTasks.length, [todayTasks]);
+    const completionPct = useMemo(() =>
+        totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0,
+        [completedToday, totalToday]
+    );
+
+    // Optimized habit progress calculation
+    const habitsWithProgress = useMemo(() => {
+        if (!now) return habits;
+
+        const weekDates = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(now);
+            d.setDate(d.getDate() - d.getDay() + i);
+            return d.toISOString().split('T')[0];
+        });
+
+        // O(N) pre-processing to make habit lookups O(1)
+        const doneTaskMap = new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
+
+        return habits.map(h => ({
+            ...h,
+            weekProgress: calcWeekProgress(h.id as Category, weekDates, doneTaskMap),
+        }));
+    }, [habits, tasks, now ? todayStr(now) : '', now ? now.getDay() : null]);
 
     // ── ACHIEVEMENT SYSTEM ────────────────────────────────────────
+    // Only run when meaningful state changes (tasks, habits, or day changes), not every second
     useEffect(() => {
-        if (!now) return;
+        if (!dailyTimestamp) return;
         const newAchievements = checkAchievements(tasks, habits, smokeStats, unlockedAchievements);
         if (newAchievements.length > unlockedAchievements.length) {
             setUnlockedAchievements(newAchievements);
             const latest = newAchievements[newAchievements.length - 1];
             notify(`🏆 Achievement Unlocked: ${latest.name}`, 'var(--orange)');
         }
-    }, [tasks, habits, smokeStats.days, unlockedAchievements, setUnlockedAchievements, notify, now]);
+    }, [tasks, habits, smokeStats.days, unlockedAchievements, setUnlockedAchievements, notify, dailyTimestamp]);
 
     // ── STABILIZE APP OBJECT ──────────────────────────────────────
     return useMemo(() => ({
