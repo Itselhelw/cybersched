@@ -1,0 +1,3 @@
+## 2025-05-15 - [The Tick-Tock Re-render Trap]
+**Learning:** In applications using a global `now` state updated every second (for timers or clock displays), every component or hook using this state will re-render/re-run every second. If expensive computations or object creation (like maps, filters, or new objects) happen without proper memoization, the entire app's performance degrades linearly with the number of tasks/data items.
+**Action:** Always memoize derived state that doesn't need second-precision (like date-based progress or stats) using a less frequent dependency (e.g., `now.toDateString()` or `Math.floor(now/60000)`). Use Sets/Maps for lookups inside loops to reduce O(N*M) complexity to O(N+M).

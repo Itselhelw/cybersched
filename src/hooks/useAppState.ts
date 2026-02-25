@@ -86,16 +86,9 @@ function todayStr(baseDate?: Date | null) {
     return baseDate ? baseDate.toISOString().split('T')[0] : '';
 }
 
-function calcWeekProgress(tasks: Task[], category: Category, now: Date | null): number {
-    if (!now) return 0;
-    const weekDates = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(now);
-        d.setDate(d.getDate() - d.getDay() + i);
-        return d.toISOString().split('T')[0];
-    });
-
+function calcWeekProgress(doneTasksSet: Set<string>, category: Category, weekDates: string[]): number {
     const daysWithTask = weekDates.filter(date =>
-        tasks.some(t => t.category === category && t.date === date && t.done)
+        doneTasksSet.has(`${category}:${date}`)
     ).length;
 
     return Math.round((daysWithTask / 7) * 100);
@@ -112,12 +105,24 @@ export function useAppState(now: Date | null) {
     const [unlockedBadges, setUnlockedBadges] = useLocalStorage<string[]>('cs-badges', []);
     const [notifications, setNotifications] = useState<{ id: string; message: string; color: string }[]>([]);
 
+    // ── EFFICIENT LOOKUP ──────────────────────────────────────────
+    const doneTasksSet = useMemo(() => {
+        const set = new Set<string>();
+        tasks.forEach(t => {
+            if (t.done) set.add(`${t.category}:${t.date}`);
+        });
+        return set;
+    }, [tasks]);
+
     // ── NOTIFICATION SYSTEM ──────────────────────────────────────
     const notify = useCallback((message: string, color = 'var(--cyan)') => {
         const id = Date.now().toString();
         setNotifications(prev => [...prev, { id, message, color }]);
         setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 3500);
     }, []);
+
+    // ── STABLE DATE STRING ────────────────────────────────────────
+    const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
 
     // ── LOG EVENTS ────────────────────────────────────────────────
     const logEvent = useCallback((type: string, payload: Record<string, unknown>, source: 'user' | 'ai' | 'system' = 'user') => {
@@ -141,14 +146,12 @@ export function useAppState(now: Date | null) {
             if (h.id !== category) return h;
 
             const daysWithDone = weekDates.filter(date =>
-                tasks.some(t => t.category === category && t.date === date && t.done)
+                doneTasksSet.has(`${category}:${date}`)
             ).length;
             const weekProgress = Math.round((daysWithDone / 7) * 100);
 
             const wasAlreadyDone = h.todayDone;
-            const todayDone = tasks.some(t =>
-                t.category === category && t.date === currentToday && t.done
-            );
+            const todayDone = doneTasksSet.has(`${category}:${currentToday}`);
 
             const newStreak = todayDone && !wasAlreadyDone ? h.streak + 1 : (todayDone ? h.streak : h.streak);
             // Note: streak logic might need refinement for "losing" streak if not done, but user focused on increments.
@@ -166,7 +169,7 @@ export function useAppState(now: Date | null) {
                 lastDone: todayDone ? currentToday : h.lastDone,
             };
         }));
-    }, [now, tasks, setHabitsRaw]);
+    }, [now ? todayStr(now) : '', setHabitsRaw, doneTasksSet]);
 
     // ── TASK ACTIONS ──────────────────────────────────────────────
     const completeTask = useCallback((taskId: string) => {
@@ -190,10 +193,10 @@ export function useAppState(now: Date | null) {
 
     // Sync effect when tasks change
     useEffect(() => {
-        if (!now) return;
+        if (!currentTodayStr) return;
         const categories: Category[] = ['body', 'mind', 'work', 'quit', 'fun'];
         categories.forEach(cat => syncTaskToHabit(cat));
-    }, [tasks, now, syncTaskToHabit]);
+    }, [tasks, currentTodayStr, syncTaskToHabit]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
@@ -248,7 +251,7 @@ export function useAppState(now: Date | null) {
     }, [now, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
 
     // ── SMOKE STATS ───────────────────────────────────────────────
-    const smokeStats: SmokeStats = (() => {
+    const smokeStats: SmokeStats = useMemo(() => {
         if (!quitDate) return { days: 0, hours: 0, minutes: 0, cigarettes: 0, moneySaved: '0', percent: 0 };
         const base = new Date(quitDate).getTime();
         // Use a stable date during SSR/initial render to prevent hydration mismatch
@@ -262,32 +265,40 @@ export function useAppState(now: Date | null) {
         const moneySaved = (cigarettes * costPerCig).toFixed(2);
         const percent = Math.min((days / 90) * 100, 100);
         return { days, hours, minutes, cigarettes, moneySaved, percent };
-    })();
+    }, [quitDate, now ? Math.floor(now.getTime() / 60000) : null, settings.cigarettesPerDay, settings.costPerPack, settings.cigarettesPerPack]);
 
     // ── COMPUTED STATS ────────────────────────────────────────────
-    const currentTodayStr = todayStr(now);
-    const todayTasks = tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''));
-    const completedToday = todayTasks.filter(t => t.done).length;
-    const totalToday = todayTasks.length;
-    const completionPct = totalToday > 0
+    const todayTasks = useMemo(() => tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')), [tasks, currentTodayStr]);
+    const completedToday = useMemo(() => todayTasks.filter(t => t.done).length, [todayTasks]);
+    const totalToday = useMemo(() => todayTasks.length, [todayTasks]);
+    const completionPct = useMemo(() => totalToday > 0
         ? Math.round((completedToday / totalToday) * 100)
-        : 0;
+        : 0, [completedToday, totalToday]);
 
-    const habitsWithProgress = habits.map(h => ({
+    const weekDates = useMemo(() => {
+        if (!now) return [];
+        return Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(now);
+            d.setDate(d.getDate() - d.getDay() + i);
+            return d.toISOString().split('T')[0];
+        });
+    }, [now ? todayStr(now) : '']);
+
+    const habitsWithProgress = useMemo(() => habits.map(h => ({
         ...h,
-        weekProgress: calcWeekProgress(tasks, h.id as Category, now),
-    }));
+        weekProgress: calcWeekProgress(doneTasksSet, h.id as Category, weekDates),
+    })), [habits, doneTasksSet, weekDates]);
 
     // ── ACHIEVEMENT SYSTEM ────────────────────────────────────────
     useEffect(() => {
-        if (!now) return;
+        if (!currentTodayStr) return;
         const newAchievements = checkAchievements(tasks, habits, smokeStats, unlockedAchievements);
         if (newAchievements.length > unlockedAchievements.length) {
             setUnlockedAchievements(newAchievements);
             const latest = newAchievements[newAchievements.length - 1];
             notify(`🏆 Achievement Unlocked: ${latest.name}`, 'var(--orange)');
         }
-    }, [tasks, habits, smokeStats.days, unlockedAchievements, setUnlockedAchievements, notify, now]);
+    }, [tasks, habits, smokeStats.days, unlockedAchievements, setUnlockedAchievements, notify, currentTodayStr]);
 
     // ── STABILIZE APP OBJECT ──────────────────────────────────────
     return useMemo(() => ({
