@@ -2227,42 +2227,84 @@ function AIChatController({
   }
 
   return (
-    <div className={`ai-chat-container ${open ? 'open' : ''}`}>
-      <div className="ai-chat-header" onClick={() => setOpen(!open)}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="ai-status-dot" />
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, letterSpacing: 1 }}>CYBERSCHED_AI_v2.0</span>
+    <div style={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      zIndex: 9999,
+    }}>
+      <div className={`ai-chat-container ${open ? 'open' : ''}`} style={{
+        position: 'fixed',
+        bottom: 80,
+        right: 24,
+        width: 380,
+        maxHeight: '70vh',
+        zIndex: 9998,
+        display: open ? 'flex' : 'none',
+        flexDirection: 'column',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-bright)',
+        borderRadius: 16,
+        boxShadow: '0 0 60px rgba(0,245,255,0.1)',
+        animation: 'slideUp 0.3s cubic-bezier(0.4,0,0.2,1)',
+      }}>
+        <div className="ai-chat-header" onClick={() => setOpen(!open)} style={{ cursor: 'pointer', padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="ai-status-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, letterSpacing: 1, color: 'var(--cyan)' }}>CYBERSCHED_AI_v2.0</span>
+          </div>
+          <div style={{ transform: open ? 'rotate(180deg)' : 'none', transition: '0.3s' }}>▲</div>
         </div>
-        <div style={{ transform: open ? 'rotate(180deg)' : 'none', transition: '0.3s' }}>▲</div>
+
+        <div className="ai-chat-messages" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {messages.map((m, i) => (
+            <div key={i} className={`message ${m.role}`} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+              <div className="message-content" style={{
+                maxWidth: '85%', padding: '10px 14px', borderRadius: m.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                background: m.role === 'user' ? 'var(--cyan)' : 'var(--bg-secondary)',
+                border: m.role === 'ai' ? '1px solid var(--border)' : 'none',
+                color: m.role === 'user' ? '#000' : 'var(--text-primary)',
+                fontSize: 13, lineHeight: 1.5,
+              }}>{m.content}</div>
+              <div className="message-time" style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 3 }}>{m.timestamp}</div>
+            </div>
+          ))}
+          {loading && (
+            <div className="message ai" style={{ display: 'flex', alignItems: 'flex-start' }}>
+              <div className="message-content" style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', fontStyle: 'italic', fontSize: 12 }}>Processing request...</div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="ai-chat-input-area" style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+          <input
+            className="ai-chat-input"
+            style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', color: 'var(--text-primary)', outline: 'none' }}
+            placeholder="Command..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+          />
+          <button className="ai-chat-send" onClick={sendMessage} disabled={loading} style={{
+            width: 42, height: 42, borderRadius: 10, background: 'var(--cyan)', border: 'none',
+            color: '#000', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1
+          }}>
+            →
+          </button>
+        </div>
       </div>
 
-      <div className="ai-chat-messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`message ${m.role}`}>
-            <div className="message-content">{m.content}</div>
-            <div className="message-time">{m.timestamp}</div>
-          </div>
-        ))}
-        {loading && (
-          <div className="message ai">
-            <div className="message-content">Processing request...</div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      <div className="ai-chat-input-area">
-        <input
-          className="ai-chat-input"
-          placeholder="Command..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && sendMessage()}
-        />
-        <button className="ai-chat-send" onClick={sendMessage} disabled={loading}>
-          SEND
-        </button>
-      </div>
+      <button onClick={() => setOpen(!open)} style={{
+        width: 56, height: 56, borderRadius: '50%', background: open ? 'var(--bg-card)' : 'var(--cyan)',
+        border: `2px solid ${open ? 'var(--border-bright)' : 'var(--cyan)'}`,
+        color: open ? 'var(--cyan)' : '#000',
+        fontSize: 22, cursor: 'pointer',
+        boxShadow: '0 0 30px rgba(0,245,255,0.3)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {open ? '✕' : '◉'}
+      </button>
     </div>
   );
 }
@@ -2920,18 +2962,6 @@ export default function Dashboard() {
         {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={app.setSettings} tasks={tasks} setTasks={app.setTasksRaw} habits={habitsWithProgress} setHabits={app.setHabitsRaw} quitDate={quitDate} setQuitDate={app.setQuitDate} userId={db.userId} notify={notify} />}
       </main>
 
-      {/* ADD TASK MODAL */}
-      {showAddTask && (
-        <div className="modal-overlay" onClick={() => setShowAddTask(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="card-header" style={{ marginBottom: 16 }}>
-              <div className="card-title">// Create Advanced Task</div>
-            </div>
-            <AdvancedTaskForm onSubmit={(data: any) => { addTask(data); setShowAddTask(false); }} onCancel={() => setShowAddTask(false)} />
-          </div>
-        </div>
-      )}
-
       <AIChatController
         tasks={tasks}
         setTasks={app.setTasksRaw}
@@ -2955,6 +2985,19 @@ export default function Dashboard() {
         loadAIMemory={db.loadAIMemory}
         userId={db.userId}
       />
+
+      {/* ADD TASK MODAL */}
+      {showAddTask && (
+        <div className="modal-overlay" onClick={() => setShowAddTask(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="card-header" style={{ marginBottom: 16 }}>
+              <div className="card-title">// Create Advanced Task</div>
+            </div>
+            <AdvancedTaskForm onSubmit={(data: any) => { addTask(data); setShowAddTask(false); }} onCancel={() => setShowAddTask(false)} />
+          </div>
+        </div>
+      )}
+
 
       <NotificationToast notifications={app.notifications} />
 
