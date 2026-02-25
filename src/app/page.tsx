@@ -12,6 +12,7 @@ import NotificationCenter from '@/components/NotificationCenter';
 import { exportTasksToCSV, exportHabitsToCSV, exportAllDataToCSV, exportDataToPDF, getWeeklyProgressData, getCategoryBreakdown, getStreakHistory, getCompletionStats } from '@/utils/exportUtils';
 import { getPriorityColor, getPriorityLabel, sortTasksByPriority, expandRecurringInTaskList, toggleSubtask, addSubtask, removeSubtask, getSubtaskProgress, logTime, getTimeStats, formatTime, getTimeColor } from '@/utils/taskUtils';
 import { calculateDailyPoints, checkAchievements, BADGES, type Achievement } from '@/utils/gamificationUtils';
+import { useSupabaseSync } from '@/hooks/useSupabaseSync';
 
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -1820,7 +1821,7 @@ function GermanSection({
 }
 
 // ── SETTINGS SECTION ──────────────────────────────────────────────
-function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void }) {
+function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
   const [edited, setEdited] = useState(false);
   const [form, setForm] = useState(settings);
 
@@ -1869,11 +1870,31 @@ function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHa
       </div>
       {edited && (
         <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
-          <button className="btn-primary" onClick={save}>SAVE SETTINGS</button>
+          <button className="btn-primary" style={{ width: '100%' }} onClick={save}>
+            SAVE SETTINGS
+          </button>
           <button className="btn-secondary" onClick={() => { setForm(settings); setEdited(false); }}>CANCEL</button>
         </div>
       )}
 
+      {/* Cloud Sync Info */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-title" style={{ color: 'var(--cyan)', marginBottom: 8 }}>☁️ Cloud Sync</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12 }}>
+          Your data syncs automatically. To use on another device, copy your User ID below and paste it into localStorage (cs-user-id) on the new device.
+        </div>
+        <div style={{ padding: '12px 16px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--cyan)', wordBreak: 'break-all', marginBottom: 12 }}>
+          {userId || 'Loading...'}
+        </div>
+        <button className="btn-secondary" onClick={() => {
+          if (userId) {
+            navigator.clipboard.writeText(userId);
+            notify('✓ User ID copied to clipboard', 'var(--green)');
+          }
+        }}>
+          COPY USER ID
+        </button>
+      </div>
     </div>
   );
 }
@@ -2025,6 +2046,11 @@ function AIChatController({
   deleteTask,
   toggleHabit,
   aiSchedule,
+  syncSchedule,
+  loadSchedule,
+  saveAIMessage,
+  loadAIMemory,
+  userId,
 }: {
   tasks: Task[];
   setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void;
@@ -2042,18 +2068,35 @@ function AIChatController({
   deleteTask: (id: string) => void;
   toggleHabit: (id: string) => void;
   aiSchedule: any;
+  syncSchedule: (s: any) => Promise<void>;
+  loadSchedule: () => Promise<any>;
+  saveAIMessage: (role: string, content: string) => Promise<void>;
+  loadAIMemory: (limit?: number) => Promise<any[]>;
+  userId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'ai',
-      content: `Hey ${settings.name}! I'm your CyberSched AI. I can see your full dashboard and control it directly. Try saying "add gym at 7am", "I just studied for 2 hours", "what should I focus on today", or "show my stats".`,
-      timestamp: new Date().toTimeString().slice(0, 5),
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Load previous AI messages from Supabase on mount
+  useEffect(() => {
+    if (!userId) return;
+    async function loadHistory() {
+      const history = await loadAIMemory(20);
+      if (history.length > 0) {
+        setMessages(history);
+      } else {
+        setMessages([{
+          role: 'ai',
+          content: `Hey ${settings.name}! I'm your CyberSched AI. I can see your full dashboard and control it directly. Try saying "add gym at 7am", "I just studied for 2 hours", "what should I focus on today", or "show my stats".`,
+          timestamp: new Date().toTimeString().slice(0, 5),
+        }]);
+      }
+    }
+    loadHistory();
+  }, [userId, settings.name]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -2078,41 +2121,9 @@ function AIChatController({
           break;
         }
 
-        case 'COMPLETE_TASK': {
-          const name = (act.taskName as string).toLowerCase();
-          const target = tasks.find(t => t.name.toLowerCase().includes(name));
-          if (target) completeTask(target.id);
-          break;
-        }
-
-        case 'DELETE_TASK': {
-          const name = (act.taskName as string).toLowerCase();
-          const target = tasks.find(t => t.name.toLowerCase().includes(name));
-          if (target) deleteTask(target.id);
-          break;
-        }
-
-        case 'CLEAR_DONE_TASKS': {
-          setTasks((prev: Task[]) => prev.filter(t => !t.done));
-          break;
-        }
-
-        case 'COMPLETE_HABIT': {
-          const id = act.habitId as string;
-          toggleHabit(id);
-          break;
-        }
-
-        case 'RESET_HABIT': {
-          const id = act.habitId as string;
-          setHabits((prev: Habit[]) => prev.map(h =>
-            h.id === id ? { ...h, todayDone: false } : h
-          ));
-          break;
-        }
-
-        case 'UPDATE_SETTING': {
-          setSettings({ ...settings, [act.key as string]: act.value });
+        case 'MARK_TASK_DONE': {
+          const tid = act.taskId as string;
+          completeTask(tid);
           break;
         }
 
@@ -2175,6 +2186,9 @@ function AIChatController({
 
     setLoading(true);
 
+    // After adding user message to state:
+    await saveAIMessage('user', userMsg);
+
     try {
       const appState = {
         tasks: tasks.map((t: any) => ({ name: t.name, category: t.category, time: t.time, done: t.done, date: t.date })),
@@ -2194,13 +2208,13 @@ function AIChatController({
 
       const data = await res.json();
 
-      if (data.actions?.length > 0) executeActions(data.actions);
+      const aiMsg: ChatMessage = { role: 'ai', content: data.message || 'Done.', timestamp: new Date().toTimeString().slice(0, 5) };
+      setMessages(prev => [...prev, aiMsg]);
 
-      setMessages(prev => [...prev, {
-        role: 'ai',
-        content: data.message || 'Done.',
-        timestamp: new Date().toTimeString().slice(0, 5),
-      }]);
+      // After adding AI response to state:
+      await saveAIMessage('ai', data.message || 'Done.');
+
+      if (data.actions?.length > 0) executeActions(data.actions);
     } catch {
       setMessages(prev => [...prev, {
         role: 'ai',
@@ -2212,123 +2226,47 @@ function AIChatController({
     }
   }
 
-  const SUGGESTIONS = [
-    'What should I focus on today?',
-    'I just finished my workout',
-    'Add study session at 3pm',
-    'Show my progress stats',
-    'Clear my completed tasks',
-  ];
-
   return (
-    <>
-      {/* Floating button */}
-      <button onClick={() => setOpen(o => !o)} style={{
-        position: 'fixed', bottom: 28, right: 28, width: 56, height: 56,
-        borderRadius: '50%', background: open ? 'var(--bg-card)' : 'var(--cyan)',
-        border: `2px solid ${open ? 'var(--border-bright)' : 'var(--cyan)'}`,
-        color: open ? 'var(--cyan)' : '#000',
-        fontSize: 22, cursor: 'pointer', zIndex: 500,
-        boxShadow: '0 0 30px rgba(0,245,255,0.3)',
-        transition: 'all 0.3s',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {open ? '✕' : '◉'}
-      </button>
-
-      {/* Chat panel */}
-      {open && (
-        <div style={{
-          position: 'fixed', bottom: 96, right: 28,
-          width: 380, height: 520,
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-bright)',
-          borderRadius: 16,
-          display: 'flex', flexDirection: 'column',
-          zIndex: 499,
-          boxShadow: '0 0 60px rgba(0,245,255,0.1)',
-          animation: 'slideUp 0.3s cubic-bezier(0.4,0,0.2,1)',
-        }}>
-          {/* Header */}
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
-            <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--cyan)', letterSpacing: 2 }}>CYBERSCHED AI</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>Controls your app in real-time</div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {messages.map((msg, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                <div style={{
-                  maxWidth: '85%', padding: '10px 14px', borderRadius: msg.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                  background: msg.role === 'user' ? 'var(--cyan)' : 'var(--bg-secondary)',
-                  border: msg.role === 'ai' ? '1px solid var(--border)' : 'none',
-                  color: msg.role === 'user' ? '#000' : 'var(--text-primary)',
-                  fontSize: 13, lineHeight: 1.5,
-                  fontFamily: 'var(--font-body)',
-                }}>
-                  {msg.content}
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 3, paddingInline: 4 }}>{msg.timestamp}</div>
-              </div>
-            ))}
-            {loading && (
-              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {[0, 1, 2].map(i => (
-                      <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--cyan)', animation: `blink 1s ${i * 0.2}s infinite` }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Suggestions */}
-          {messages.length <= 1 && (
-            <div style={{ padding: '0 12px 8px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {SUGGESTIONS.map((s, i) => (
-                <button key={i} onClick={() => setInput(s)} style={{
-                  padding: '5px 10px', borderRadius: 20, border: '1px solid var(--border)',
-                  background: 'transparent', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)',
-                  fontSize: 10, cursor: 'pointer', transition: 'all 0.2s',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--cyan)'; e.currentTarget.style.color = 'var(--cyan)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Input */}
-          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
-            <input
-              style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', color: 'var(--text-primary)', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none' }}
-              placeholder="Tell me what to do..."
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              onFocus={e => (e.currentTarget.style.borderColor = 'var(--border-bright)')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-            />
-            <button onClick={sendMessage} disabled={loading} style={{
-              width: 42, height: 42, borderRadius: 10, background: 'var(--cyan)', border: 'none',
-              color: '#000', fontSize: 16, cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.5 : 1, transition: 'all 0.2s',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>→</button>
-          </div>
+    <div className={`ai-chat-container ${open ? 'open' : ''}`}>
+      <div className="ai-chat-header" onClick={() => setOpen(!open)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="ai-status-dot" />
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, letterSpacing: 1 }}>CYBERSCHED_AI_v2.0</span>
         </div>
-      )}
-    </>
+        <div style={{ transform: open ? 'rotate(180deg)' : 'none', transition: '0.3s' }}>▲</div>
+      </div>
+
+      <div className="ai-chat-messages">
+        {messages.map((m, i) => (
+          <div key={i} className={`message ${m.role}`}>
+            <div className="message-content">{m.content}</div>
+            <div className="message-time">{m.timestamp}</div>
+          </div>
+        ))}
+        {loading && (
+          <div className="message ai">
+            <div className="message-content">Processing request...</div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <div className="ai-chat-input-area">
+        <input
+          className="ai-chat-input"
+          placeholder="Command..."
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && sendMessage()}
+        />
+        <button className="ai-chat-send" onClick={sendMessage} disabled={loading}>
+          SEND
+        </button>
+      </div>
+    </div>
   );
 }
+
 
 function CyberSection({
   tasks, addTask, notify,
@@ -2651,6 +2589,56 @@ export default function Dashboard() {
   const [aiSchedule, setAiSchedule] = useLocalStorage<any>('cybersched-ai-schedule', null);
   const [showAddTask, setShowAddTask] = useState(false);
 
+  const db = useSupabaseSync();
+
+  // Load from Supabase on first mount
+  useEffect(() => {
+    if (!db.userId) return;
+    async function loadFromCloud() {
+      const [cloudTasks, cloudHabits, cloudSettings, cloudSchedule] = await Promise.all([
+        db.loadTasks(),
+        db.loadHabits(),
+        db.loadSettings(),
+        db.loadSchedule(),
+      ]);
+
+      if (cloudTasks.length > 0) app.setTasksRaw(cloudTasks);
+      if (cloudHabits.length > 0) app.setHabitsRaw(cloudHabits);
+      if (cloudSettings) {
+        app.setSettings({
+          name: cloudSettings.name,
+          cigarettesPerDay: cloudSettings.cigarettes_per_day,
+          costPerPack: cloudSettings.cost_per_pack,
+          cigarettesPerPack: cloudSettings.cigarettes_per_pack,
+          currency: cloudSettings.currency,
+          goals: cloudSettings.goals || '',
+        });
+        app.setQuitDate(cloudSettings.quit_date || '');
+      }
+      if (cloudSchedule) setAiSchedule(cloudSchedule);
+    }
+    loadFromCloud();
+  }, [db.userId]);
+
+  // Auto-sync to Supabase whenever data changes
+  useEffect(() => {
+    if (!db.userId || app.tasks.length === 0) return;
+    const timer = setTimeout(() => db.syncTasks(app.tasks), 2000);
+    return () => clearTimeout(timer);
+  }, [app.tasks, db.userId]);
+
+  useEffect(() => {
+    if (!db.userId) return;
+    const timer = setTimeout(() => db.syncHabits(app.habits), 2000);
+    return () => clearTimeout(timer);
+  }, [app.habits, db.userId]);
+
+  useEffect(() => {
+    if (!db.userId) return;
+    const timer = setTimeout(() => db.syncSettings(app.settings as any, app.quitDate), 2000);
+    return () => clearTimeout(timer);
+  }, [app.settings, app.quitDate, db.userId]);
+
   useEffect(() => {
     setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -2738,6 +2726,23 @@ export default function Dashboard() {
             <span className="nav-label">{nav.label}</span>
           </button>
         ))}
+
+        {/* Sync Status Indicator */}
+        <div style={{
+          position: 'fixed', bottom: 90, left: 0, width: 72,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+          zIndex: 10
+        }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: db.syncError ? 'var(--red)' : db.syncing ? 'var(--orange)' : 'var(--green)',
+            boxShadow: `0 0 8px ${db.syncError ? 'var(--red)' : db.syncing ? 'var(--orange)' : 'var(--green)'}`,
+            animation: db.syncing ? 'blink 1s infinite' : 'none',
+          }} />
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-muted)', textAlign: 'center' }}>
+            {db.syncing ? 'SYNC' : db.syncError ? 'OFF' : db.lastSync || 'OK'}
+          </div>
+        </div>
       </nav>
 
       {/* MAIN CONTENT */}
@@ -2912,7 +2917,7 @@ export default function Dashboard() {
             notify={notify}
           />
         )}
-        {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={app.setSettings} tasks={tasks} setTasks={app.setTasksRaw} habits={habitsWithProgress} setHabits={app.setHabitsRaw} quitDate={quitDate} setQuitDate={app.setQuitDate} />}
+        {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={app.setSettings} tasks={tasks} setTasks={app.setTasksRaw} habits={habitsWithProgress} setHabits={app.setHabitsRaw} quitDate={quitDate} setQuitDate={app.setQuitDate} userId={db.userId} notify={notify} />}
       </main>
 
       {/* ADD TASK MODAL */}
@@ -2944,6 +2949,11 @@ export default function Dashboard() {
         deleteTask={app.deleteTask}
         toggleHabit={toggleHabit}
         aiSchedule={aiSchedule}
+        syncSchedule={db.syncSchedule}
+        loadSchedule={db.loadSchedule}
+        saveAIMessage={db.saveAIMessage}
+        loadAIMemory={db.loadAIMemory}
+        userId={db.userId}
       />
 
       <NotificationToast notifications={app.notifications} />
