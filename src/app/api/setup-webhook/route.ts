@@ -2,16 +2,27 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
+    const webhookUrl = `https://cybersched.vercel.app/api/telegram`;
 
-    // Debug — show what token the server is actually using
-    if (!token) {
-        return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN is not set on server' });
-    }
+    const res = await fetch(
+        `https://api.telegram.org/bot${token}/setWebhook`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: webhookUrl,
+                allowed_updates: ['message', 'callback_query'],
+                drop_pending_updates: true,
+            }),
+        }
+    );
 
+    const data = await res.json();
+
+    // Also return what URL we tried to set
     return NextResponse.json({
-        tokenFound: true,
-        tokenStart: token.slice(0, 15),
-        tokenEnd: token.slice(-6),
-        tokenLength: token.length,
+        ...data,
+        attempted_url: webhookUrl,
+        token_start: token?.slice(0, 15),
     });
 }
