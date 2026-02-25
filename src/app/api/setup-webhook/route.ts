@@ -2,10 +2,10 @@
 
 export async function GET() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const webhookUrl = `https://cybersched.vercel.app/api/telegram`;
+  const webhookUrl = 'https://cybersched.vercel.app/api/telegram';
 
   const res = await fetch(
-    `https://api.telegram.org/bot${token}/setWebhook`,
+    'https://api.telegram.org/bot' + token + '/setWebhook',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -18,9 +18,5 @@ export async function GET() {
   );
 
   const data = await res.json();
-  return NextResponse.json({
-    ...data,
-    attempted_url: webhookUrl,
-    token_start: token?.slice(0, 15),
-  });
+  return NextResponse.json({ ...data, attempted_url: webhookUrl });
 }
