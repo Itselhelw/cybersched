@@ -18,8 +18,6 @@ export async function GET() {
     );
 
     const data = await res.json();
-
-    // Also return what URL we tried to set
     return NextResponse.json({
         ...data,
         attempted_url: webhookUrl,
