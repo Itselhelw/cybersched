@@ -69,9 +69,14 @@ export async function POST(req: NextRequest) {
                 return handleGeneral(userMessage, appState);
         }
     } catch (err) {
-        console.error('Telegram webhook error:', err);
-        await sendTelegram('❌ Something went wrong. Try again.');
-        return NextResponse.json({ ok: true });
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error('Telegram webhook error:', errMsg);
+        try {
+            await sendTelegram(`❌ Error: ${errMsg.slice(0, 200)}`);
+        } catch (e) {
+            console.error('Failed to send error to Telegram:', e);
+        }
+        return NextResponse.json({ ok: true, debug_error: errMsg });
     }
 }
 

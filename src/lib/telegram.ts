@@ -1,21 +1,31 @@
-const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
 
 export async function sendTelegram(text: string, options?: {
     parse_mode?: 'Markdown' | 'HTML';
     reply_markup?: object;
 }) {
+    const telegramApi = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (!chatId) {
+        console.error('sendTelegram: TELEGRAM_CHAT_ID is not set');
+        return;
+    }
+
     try {
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
+        const res = await fetch(`${telegramApi}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: CHAT_ID,
+                chat_id: chatId,
                 text,
                 parse_mode: options?.parse_mode || 'Markdown',
                 reply_markup: options?.reply_markup,
             }),
         });
+        const data = await res.json();
+        if (!data.ok) {
+            console.error('Telegram API error:', JSON.stringify(data));
+        }
     } catch (err) {
         console.error('Telegram send error:', err);
     }
