@@ -4,8 +4,6 @@ import { sendTelegram, sendTelegramConfirmation, parseTelegramUpdate } from '@/l
 import { classifyIntent } from '@/lib/intent';
 import { getFile, updateFile, getRepoStructure, getLatestCommit } from '@/lib/github';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 // Pending confirmations store (in-memory, resets on cold start)
 const pendingConfirmations = new Map<string, {
     action: string;
@@ -79,6 +77,7 @@ export async function POST(req: NextRequest) {
 
 // ── APP CONTROL ───────────────────────────────────────────────────────────────
 async function handleAppControl(message: string, appState: unknown, extracted: Record<string, unknown>) {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const response = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
         max_tokens: 1000,
@@ -161,6 +160,7 @@ ${state.habits?.map((h: { label: string; streak: number; todayDone: boolean }) =
 async function handleGenerateSchedule(message: string, appState: unknown) {
     await sendTelegram('🗓️ Generating your weekly schedule — give me 10 seconds...');
 
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const response = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
         max_tokens: 4000,
@@ -206,6 +206,7 @@ async function handleCodeEdit(message: string, extracted: Record<string, unknown
     const files = await getRepoStructure();
     const commit = await getLatestCommit();
 
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     // Find the most relevant file
     const response = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
@@ -311,6 +312,7 @@ async function handleDeployStatus() {
 
 // ── GENERAL ASSISTANT ─────────────────────────────────────────────────────────
 async function handleGeneral(message: string, appState: unknown) {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const response = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
         max_tokens: 1000,

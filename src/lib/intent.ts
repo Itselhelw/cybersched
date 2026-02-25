@@ -1,7 +1,5 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 export type Intent =
     | 'app_control'      // add task, mark habit, check progress
     | 'code_edit'        // change UI, add feature, fix bug
@@ -27,6 +25,7 @@ export interface ClassifiedIntent {
 }
 
 export async function classifyIntent(message: string, appState: unknown): Promise<ClassifiedIntent> {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const response = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
         max_tokens: 500,
