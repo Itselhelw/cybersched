@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { checkAchievements, type Achievement } from '@/utils/gamificationUtils';
 
 export type Category = 'body' | 'mind' | 'work' | 'quit' | 'fun';
-export type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'german' | 'settings' | 'analytics';
+export type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'german' | 'cyber' | 'settings' | 'analytics';
 
 export interface Task {
     id: string;

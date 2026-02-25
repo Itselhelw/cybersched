@@ -202,6 +202,436 @@ const GERMAN_ROADMAP = [
   },
 ];
 
+const CYBER_ROADMAP = [
+  {
+    month: 1, phase: 'Foundation', level: 'Beginner',
+    title: 'Linux & Command Line Mastery',
+    color: '#00ff88',
+    skills: [
+      'File system navigation (cd, ls, pwd)',
+      'File manipulation (cat, nano, vi, grep, find)',
+      'Permissions (chmod, chown, rwx)',
+      'Process management (ps, kill, top)',
+      'Networking commands (ifconfig, ping, netstat)',
+      'Bash scripting: variables, loops, conditionals',
+      'Automating recon tasks with Bash',
+    ],
+    tools: ['Kali Linux VM', 'OverTheWire Bandit', 'Terminal'],
+    resources: [
+      { name: 'Linux for Hackers — NetworkChuck', url: 'https://youtube.com/@NetworkChuck', type: 'video' },
+      { name: 'OverTheWire Bandit (Levels 0–20)', url: 'https://overthewire.org/wargames/bandit/', type: 'lab' },
+      { name: 'Bash Scripting for Hackers — HackerSploit', url: 'https://youtube.com/@HackerSploit', type: 'video' },
+      { name: 'Bash Scripting Tutorial — ryans-tutorials', url: 'https://ryanstutorials.net/bash-scripting-tutorial/', type: 'reading' },
+    ],
+    dailyTasks: [
+      '90 min deep work: Linux video + practice in Kali VM',
+      '50 min OverTheWire Bandit challenges',
+      '15 min document commands learned in GitHub',
+      '10 min Anki cards review (commands + ports)',
+    ],
+    project: 'Auto-Recon Script — takes IP, runs ping + nmap + whois, saves to file',
+    checkpoint: [
+      'Complete Bandit levels 0–20',
+      'Navigate Linux confidently without help',
+      'Write a Bash script that automates a recon task',
+      'Upload 1 project to GitHub with README',
+    ],
+  },
+  {
+    month: 2, phase: 'Foundation', level: 'Beginner',
+    title: 'Python for Pentesting',
+    color: '#00ff88',
+    skills: [
+      'Variables, data types (strings, lists, dicts)',
+      'Control flow (if/else, for/while loops)',
+      'Functions and modules',
+      'File operations (reading, writing)',
+      'Error handling (try/except)',
+      'Socket programming for network tasks',
+      'HTTP requests with requests library',
+      'HTML parsing with BeautifulSoup',
+    ],
+    tools: ['Python 3', 'Kali Linux', 'GitHub', 'Anki'],
+    resources: [
+      { name: 'Python for Beginners — Corey Schafer', url: 'https://youtube.com/@coreyms', type: 'video' },
+      { name: 'HackinScience Python Exercises', url: 'https://www.hackinscience.org/', type: 'lab' },
+      { name: 'Socket Programming — Tech With Tim', url: 'https://youtube.com/@TechWithTim', type: 'video' },
+      { name: 'LearnPython.org (free, in-browser)', url: 'https://learnpython.org', type: 'exercise' },
+    ],
+    dailyTasks: [
+      '90 min deep work: Python video + replicate all code',
+      '50 min solve 2-3 HackinScience exercises',
+      '15 min upload code to GitHub with comments',
+      '10 min Anki review',
+    ],
+    project: 'Subdomain Enumerator — takes domain, tests common subdomains, outputs CSV',
+    checkpoint: [
+      'Build a port scanner in Python',
+      'Build a subdomain enumerator',
+      '2 Python projects on GitHub with READMEs',
+      'Understand TCP vs UDP fundamentals',
+    ],
+  },
+  {
+    month: 3, phase: 'Foundation', level: 'Beginner',
+    title: 'Networking & Web Fundamentals',
+    color: '#00ff88',
+    skills: [
+      'OSI Model — all 7 layers',
+      'TCP 3-way handshake',
+      'Common ports (80, 443, 22, 21, 445, 3389)',
+      'IP addressing and subnetting basics',
+      'DNS, HTTP, HTTPS deep understanding',
+      'HTTP methods (GET, POST, PUT, DELETE)',
+      'HTTP headers, cookies, sessions',
+      'Burp Suite Community Edition basics',
+    ],
+    tools: ['Wireshark', 'Burp Suite Community', 'Cisco Packet Tracer', 'Browser DevTools'],
+    resources: [
+      { name: 'Free CCNA — NetworkChuck (Ep. 1–10)', url: 'https://youtube.com/@NetworkChuck', type: 'video' },
+      { name: 'HTTP Crash Course — Traversy Media', url: 'https://youtube.com/@TraversyMedia', type: 'video' },
+      { name: 'Burp Suite Official Docs', url: 'https://portswigger.net/burp/documentation', type: 'reading' },
+      { name: 'Wireshark Tutorial — David Bombal', url: 'https://youtube.com/@davidbombal', type: 'video' },
+    ],
+    dailyTasks: [
+      '90 min deep work: networking video + Wireshark capture',
+      '50 min Burp Suite practice — intercept own traffic',
+      '15 min draw network diagrams or subnetting practice',
+      '10 min Anki review',
+    ],
+    project: 'HTTP Request Analyzer — captures and logs HTTP traffic patterns',
+    checkpoint: [
+      'Explain OSI model from memory',
+      'Intercept and modify HTTP requests in Burp Suite',
+      'Read and understand raw Wireshark packet captures',
+      'Know all common port numbers by heart',
+    ],
+  },
+  {
+    month: 4, phase: 'Web Pentesting', level: 'Intermediate',
+    title: 'OWASP Top 10 — Injection Attacks',
+    color: '#00f5ff',
+    skills: [
+      'SQL Injection (in-band, blind, time-based)',
+      'NoSQL Injection',
+      'Command Injection',
+      'XSS — Reflected, Stored, DOM-based',
+      'Using sqlmap for automated SQLi',
+      'Manual SQLi payload crafting',
+      'Burp Suite Repeater and Intruder',
+      'OWASP Testing methodology',
+    ],
+    tools: ['Burp Suite', 'sqlmap', 'DVWA', 'Juice Shop', 'PortSwigger Academy'],
+    resources: [
+      { name: 'PortSwigger Web Security Academy — SQLi', url: 'https://portswigger.net/web-security/sql-injection', type: 'lab' },
+      { name: 'DVWA Setup & Labs', url: 'https://github.com/digininja/DVWA', type: 'lab' },
+      { name: 'PwnFunction XSS Explained', url: 'https://youtube.com/@PwnFunction', type: 'video' },
+      { name: 'TryHackMe OWASP Top 10 Room', url: 'https://tryhackme.com/room/owasptop10', type: 'lab' },
+    ],
+    dailyTasks: [
+      '90 min PortSwigger Academy labs (SQLi or XSS)',
+      '50 min DVWA or Juice Shop hands-on practice',
+      '15 min write up findings in notes',
+      '10 min Anki review (payloads + techniques)',
+    ],
+    project: 'SQL Injection Scanner — tests a URL for common SQLi vulnerabilities',
+    checkpoint: [
+      'Complete all PortSwigger SQLi labs',
+      'Complete all PortSwigger XSS labs',
+      'Exploit DVWA at medium difficulty',
+      'Write a basic SQL injection report',
+    ],
+  },
+  {
+    month: 5, phase: 'Web Pentesting', level: 'Intermediate',
+    title: 'Authentication & Access Control Attacks',
+    color: '#00f5ff',
+    skills: [
+      'Broken Authentication vulnerabilities',
+      'Session hijacking and fixation',
+      'IDOR (Insecure Direct Object Reference)',
+      'Broken Access Control',
+      'CSRF (Cross-Site Request Forgery)',
+      'JWT attacks and token manipulation',
+      'Password attacks — brute force, credential stuffing',
+      'Burp Suite Scanner basics',
+    ],
+    tools: ['Burp Suite Pro (Community)', 'Hydra', 'PortSwigger Academy', 'JWT.io'],
+    resources: [
+      { name: 'PortSwigger — Authentication Labs', url: 'https://portswigger.net/web-security/authentication', type: 'lab' },
+      { name: 'PortSwigger — Access Control Labs', url: 'https://portswigger.net/web-security/access-control', type: 'lab' },
+      { name: 'PortSwigger — CSRF Labs', url: 'https://portswigger.net/web-security/csrf', type: 'lab' },
+      { name: 'IppSec HackTheBox Walkthroughs', url: 'https://youtube.com/@ippsec', type: 'video' },
+    ],
+    dailyTasks: [
+      '90 min PortSwigger Academy — auth and access labs',
+      '50 min HackTheBox or TryHackMe machine',
+      '15 min write findings and methodology notes',
+      '10 min Anki review',
+    ],
+    project: 'IDOR Detector — automated script to find object reference vulnerabilities',
+    checkpoint: [
+      'Complete all PortSwigger authentication labs',
+      'Complete all PortSwigger access control labs',
+      'Exploit a JWT vulnerability in a lab',
+      'Complete 2 TryHackMe web pentesting rooms',
+    ],
+  },
+  {
+    month: 6, phase: 'Web Pentesting', level: 'Intermediate',
+    title: 'Advanced Web Attacks & Bug Bounty',
+    color: '#00f5ff',
+    skills: [
+      'SSRF (Server Side Request Forgery)',
+      'XXE (XML External Entity)',
+      'File upload vulnerabilities',
+      'Directory traversal and LFI/RFI',
+      'Business logic vulnerabilities',
+      'HTTP request smuggling basics',
+      'Bug bounty report writing',
+      'Responsible disclosure process',
+    ],
+    tools: ['Burp Suite', 'ffuf', 'Nikto', 'HackerOne', 'Bugcrowd'],
+    resources: [
+      { name: 'PortSwigger — SSRF Labs', url: 'https://portswigger.net/web-security/ssrf', type: 'lab' },
+      { name: 'PortSwigger — File Upload Labs', url: 'https://portswigger.net/web-security/file-upload', type: 'lab' },
+      { name: 'HackerOne Hacker101 CTF', url: 'https://ctf.hacker101.com/', type: 'lab' },
+      { name: 'Bug Bounty Bootcamp — NahamSec', url: 'https://youtube.com/@NahamSec', type: 'video' },
+    ],
+    dailyTasks: [
+      '90 min PortSwigger advanced labs (SSRF, XXE, uploads)',
+      '50 min Hacker101 CTF challenges',
+      '15 min write a mock bug bounty report',
+      '10 min Anki review',
+    ],
+    project: 'Complete 5 CTF challenges and write professional bug reports for each',
+    checkpoint: [
+      'Complete PortSwigger SSRF and XXE labs',
+      'Submit first HackerOne VDP report',
+      'Complete 5 Hacker101 CTF flags',
+      'Write 3 professional vulnerability reports',
+    ],
+  },
+  {
+    month: 7, phase: 'API & Automation', level: 'Advanced',
+    title: 'REST API Pentesting',
+    color: '#ff8c00',
+    skills: [
+      'REST API architecture and testing methodology',
+      'OWASP API Top 10',
+      'API authentication attacks (OAuth, API keys)',
+      'Mass assignment vulnerabilities',
+      'API rate limiting bypass',
+      'Fuzzing API endpoints',
+      'Postman for API testing',
+      'API documentation analysis',
+    ],
+    tools: ['Postman', 'Burp Suite', 'ffuf', 'crAPI', 'OWASP API Top 10'],
+    resources: [
+      { name: 'OWASP API Security Top 10', url: 'https://owasp.org/www-project-api-security/', type: 'reading' },
+      { name: 'crAPI Vulnerable API Lab', url: 'https://github.com/OWASP/crAPI', type: 'lab' },
+      { name: 'InsiderPhD API Hacking Series', url: 'https://youtube.com/@InsiderPhD', type: 'video' },
+      { name: 'HackTricks API Security', url: 'https://book.hacktricks.xyz/', type: 'reading' },
+    ],
+    dailyTasks: [
+      '90 min API theory + crAPI lab setup and exploration',
+      '50 min Postman API fuzzing practice',
+      '15 min document API vulnerabilities found',
+      '10 min Anki review',
+    ],
+    project: 'API Security Testing Framework — automated tool to test common API vulnerabilities',
+    checkpoint: [
+      'Complete all crAPI challenges',
+      'Exploit 3 OWASP API Top 10 vulnerabilities in labs',
+      'Build an API fuzzing script in Python',
+      'Write an API penetration test report',
+    ],
+  },
+  {
+    month: 8, phase: 'API & Automation', level: 'Advanced',
+    title: 'GraphQL & Custom Tooling',
+    color: '#ff8c00',
+    skills: [
+      'GraphQL architecture and introspection',
+      'GraphQL injection attacks',
+      'Batching attacks and DoS via GraphQL',
+      'Custom Python pentesting tools',
+      'Automating vulnerability scanning',
+      'Scripting Burp Suite extensions',
+      'Wordlist generation and optimization',
+      'Advanced ffuf and feroxbuster usage',
+    ],
+    tools: ['GraphQL Voyager', 'Damn Vulnerable GraphQL App', 'Python', 'Burp Suite'],
+    resources: [
+      { name: 'Damn Vulnerable GraphQL App', url: 'https://github.com/dolevf/Damn-Vulnerable-GraphQL-Application', type: 'lab' },
+      { name: 'GraphQL Hacking — Rana Khalil', url: 'https://youtube.com/@RanaKhalil101', type: 'video' },
+      { name: 'PayloadsAllTheThings GitHub', url: 'https://github.com/swisskyrepo/PayloadsAllTheThings', type: 'reading' },
+      { name: 'HackTricks GraphQL Section', url: 'https://book.hacktricks.xyz/', type: 'reading' },
+    ],
+    dailyTasks: [
+      '90 min GraphQL lab challenges',
+      '50 min build custom Python automation tool',
+      '15 min update GitHub portfolio with new tools',
+      '10 min Anki review',
+    ],
+    project: 'GraphQL Security Scanner — detects introspection enabled and common misconfigurations',
+    checkpoint: [
+      'Complete DVGA (Damn Vulnerable GraphQL App)',
+      'Build 2 custom automation tools in Python',
+      'Perform a full API penetration test on a lab target',
+      'Portfolio has 6+ projects on GitHub',
+    ],
+  },
+  {
+    month: 9, phase: 'API & Automation', level: 'Advanced',
+    title: 'Advanced Automation & CTF Mastery',
+    color: '#ff8c00',
+    skills: [
+      'Chaining multiple vulnerabilities',
+      'Advanced Burp Suite workflows',
+      'Nuclei templates for custom scanning',
+      'Subdomain enumeration at scale',
+      'GitHub dorking for bug bounty',
+      'Google dorking techniques',
+      'Report writing at professional level',
+      'HackTheBox medium difficulty machines',
+    ],
+    tools: ['Nuclei', 'Amass', 'Subfinder', 'HackTheBox', 'TryHackMe'],
+    resources: [
+      { name: 'HackTheBox Academy — Web Pentesting', url: 'https://academy.hackthebox.com/', type: 'lab' },
+      { name: 'Nuclei Templates Documentation', url: 'https://nuclei.projectdiscovery.io/', type: 'reading' },
+      { name: 'IppSec — HTB Machine Walkthroughs', url: 'https://youtube.com/@ippsec', type: 'video' },
+      { name: 'Bug Bounty Tips — Twitter #bugbounty', url: 'https://twitter.com/hashtag/bugbounty', type: 'community' },
+    ],
+    dailyTasks: [
+      '90 min HackTheBox machine or advanced lab',
+      '50 min build Nuclei custom template or automation',
+      '15 min write professional pentest report section',
+      '10 min Anki review',
+    ],
+    project: 'Complete API Testing Framework — full automated recon to exploitation pipeline',
+    checkpoint: [
+      'Complete 10 HackTheBox machines total',
+      'Write 5 professional-grade pentest reports',
+      'Submit 3 real bug bounty reports (VDP programs)',
+      'Portfolio has 8+ projects on GitHub',
+    ],
+  },
+  {
+    month: 10, phase: 'Active Directory', level: 'Expert',
+    title: 'Active Directory Fundamentals',
+    color: '#9d4edd',
+    skills: [
+      'Active Directory architecture and components',
+      'Domain Controllers, forests, trusts',
+      'LDAP enumeration',
+      'Kerberos authentication deep dive',
+      'BloodHound for AD mapping',
+      'PowerView and PowerSploit',
+      'Initial access techniques',
+      'Local privilege escalation',
+    ],
+    tools: ['BloodHound', 'PowerView', 'Impacket', 'Evil-WinRM', 'GOAD Lab'],
+    resources: [
+      { name: 'Active Directory Series — TheCyberMentor', url: 'https://youtube.com/@TCMSecurityAcademy', type: 'video' },
+      { name: 'TryHackMe — Active Directory Path', url: 'https://tryhackme.com/paths', type: 'lab' },
+      { name: 'GOAD Lab Setup (Game of Active Directory)', url: 'https://github.com/Orange-Cyberdefense/GOAD', type: 'lab' },
+      { name: 'HackTricks — Active Directory Section', url: 'https://book.hacktricks.xyz/windows-hardening/active-directory-methodology', type: 'reading' },
+    ],
+    dailyTasks: [
+      '90 min AD theory + BloodHound lab exploration',
+      '50 min TryHackMe AD room or GOAD lab',
+      '15 min document attack paths found',
+      '10 min Anki review (AD commands + techniques)',
+    ],
+    project: 'AD Enumeration Script — automated BloodHound data collection and analysis',
+    checkpoint: [
+      'Set up GOAD lab environment',
+      'Map an AD environment with BloodHound',
+      'Complete TryHackMe AD fundamentals path',
+      'Perform local privilege escalation in lab',
+    ],
+  },
+  {
+    month: 11, phase: 'Active Directory', level: 'Expert',
+    title: 'AD Lateral Movement & Persistence',
+    color: '#9d4edd',
+    skills: [
+      'Pass-the-Hash and Pass-the-Ticket',
+      'Kerberoasting and AS-REP Roasting',
+      'Golden Ticket and Silver Ticket attacks',
+      'DCSync attack',
+      'Lateral movement techniques',
+      'Mimikatz for credential dumping',
+      'Persistence mechanisms',
+      'Domain Dominance techniques',
+    ],
+    tools: ['Mimikatz', 'Impacket', 'CrackMapExec', 'Rubeus', 'BloodHound'],
+    resources: [
+      { name: 'Rana Khalil — AD Attack Walkthroughs', url: 'https://youtube.com/@RanaKhalil101', type: 'video' },
+      { name: 'HackTheBox — Active Directory Machines', url: 'https://hackthebox.com', type: 'lab' },
+      { name: 'Impacket Suite Documentation', url: 'https://github.com/fortra/impacket', type: 'reading' },
+      { name: 'SpecterOps BloodHound Docs', url: 'https://bloodhound.readthedocs.io/', type: 'reading' },
+    ],
+    dailyTasks: [
+      '90 min advanced AD attack techniques in GOAD',
+      '50 min HackTheBox AD machine',
+      '15 min document attack chain and methodology',
+      '10 min Anki review',
+    ],
+    project: 'Full AD Attack Chain — recon to domain compromise in GOAD lab environment',
+    checkpoint: [
+      'Successfully Kerberoast in lab environment',
+      'Perform Golden Ticket attack in lab',
+      'Complete DCSync and dump all hashes',
+      'Compromise full GOAD domain',
+    ],
+  },
+  {
+    month: 12, phase: 'Active Directory', level: 'Expert',
+    title: 'Job-Ready — Portfolio & Reporting',
+    color: '#9d4edd',
+    skills: [
+      'Full penetration test methodology (PTES)',
+      'Executive and technical report writing',
+      'Remediation recommendations',
+      'Professional communication with clients',
+      'Interview preparation for pentesting roles',
+      'CVE research and vulnerability analysis',
+      'Responsible disclosure mastery',
+      'Building public security presence',
+    ],
+    tools: ['All previous tools', 'GitHub Portfolio', 'LinkedIn', 'HackerOne'],
+    resources: [
+      { name: 'PTES — Pentest Execution Standard', url: 'http://www.pentest-standard.org/', type: 'reading' },
+      { name: 'DEF CON Talks — YouTube', url: 'https://youtube.com/@DEFCONConference', type: 'video' },
+      { name: 'TCM Security Report Templates', url: 'https://tcm-sec.com/', type: 'reading' },
+      { name: 'HackerOne Public Reports', url: 'https://hackerone.com/hacktivity', type: 'reading' },
+    ],
+    dailyTasks: [
+      '90 min complete a full mock pentest engagement',
+      '50 min write professional pentest report',
+      '20 min update GitHub portfolio and LinkedIn',
+      '10 min review public bug bounty reports for learning',
+    ],
+    project: 'Full Pentest Report — complete web + AD engagement report ready for employers',
+    checkpoint: [
+      '12 projects on GitHub with professional READMEs',
+      '50+ CTF challenges completed total',
+      'Submit 5+ real bug bounty reports',
+      'Portfolio reviewed and job applications sent',
+    ],
+  },
+];
+
+const CYBER_RESOURCE_ICONS: Record<string, string> = {
+  video: '▶',
+  lab: '⚡',
+  exercise: '✏️',
+  reading: '📖',
+  community: '👥',
+};
+
 const RESOURCE_ICONS: Record<string, string> = {
   video: '▶',
   podcast: '🎧',
@@ -1900,6 +2330,318 @@ function AIChatController({
   );
 }
 
+function CyberSection({
+  tasks, addTask, notify,
+}: {
+  tasks: Task[];
+  addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
+  notify: (msg: string, color?: string) => void;
+}) {
+  const [currentMonth, setCurrentMonth] = useLocalStorage<number>('cyber-month', 1);
+  const [hoursLogged, setHoursLogged] = useLocalStorage<number>('cyber-hours', 0);
+  const [studyStreak, setStudyStreak] = useLocalStorage<number>('cyber-streak', 0);
+  const [lastStudyDate, setLastStudyDate] = useLocalStorage<string>('cyber-last-study', '');
+  const [completedSkills, setCompletedSkills] = useLocalStorage<string[]>('cyber-skills', []);
+  const [completedCheckpoints, setCompletedCheckpoints] = useLocalStorage<string[]>('cyber-checkpoints', []);
+  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'resources' | 'tasks'>('overview');
+  const [tasksAddedDate, setTasksAddedDate] = useLocalStorage<string>('cyber-tasks-date', '');
+
+  const roadmap = CYBER_ROADMAP[currentMonth - 1];
+  const today = new Date().toISOString().split('T')[0];
+  const phaseColor = roadmap.color;
+
+  // Auto-add today's cyber tasks every morning
+  useEffect(() => {
+    if (tasksAddedDate === today) return;
+    const alreadyHasCyberTasks = tasks.some(t =>
+      t.category === 'work' && t.name.startsWith('🔐')
+    );
+    if (!alreadyHasCyberTasks) {
+      const times = ['09:00', '10:30', '13:00', '15:00'];
+      roadmap.dailyTasks.forEach((task, i) => {
+        addTask({ name: `🔐 ${task}`, category: 'work', time: times[i] || '10:00' });
+      });
+      setTasksAddedDate(today);
+      notify('🔐 Cybersecurity tasks added for today!', phaseColor);
+    }
+  }, [today]);
+
+  function markStudied() {
+    if (lastStudyDate === today) return;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const wasYesterday = lastStudyDate === yesterday.toISOString().split('T')[0];
+    setStudyStreak(wasYesterday ? studyStreak + 1 : 1);
+    setLastStudyDate(today);
+    setHoursLogged(h => h + 3);
+    notify('🔥 Study session logged! +3 hours', 'var(--green)');
+  }
+
+  function toggleSkill(skill: string) {
+    setCompletedSkills(prev =>
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+    );
+  }
+
+  function toggleCheckpoint(cp: string) {
+    setCompletedCheckpoints(prev =>
+      prev.includes(cp) ? prev.filter(c => c !== cp) : [...prev, cp]
+    );
+  }
+
+  const skillsProgress = Math.round(
+    (completedSkills.filter(s => roadmap.skills.includes(s)).length / roadmap.skills.length) * 100
+  );
+  const checkpointProgress = Math.round(
+    (completedCheckpoints.filter(c => roadmap.checkpoint.includes(c)).length / roadmap.checkpoint.length) * 100
+  );
+
+  const phaseColors: Record<string, string> = {
+    Foundation: '#00ff88',
+    'Web Pentesting': '#00f5ff',
+    'API & Automation': '#ff8c00',
+    'Active Directory': '#9d4edd',
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <div className="header-title">CyberSched // Cybersecurity OS</div>
+          <div className="header-greeting">
+            Pentest <span style={{ color: phaseColor }}>{roadmap.phase}</span>
+          </div>
+          <div className="header-date">Month {currentMonth} of 12 — {roadmap.title}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="btn-secondary" style={{ padding: '8px 14px', fontSize: 11 }}
+            onClick={() => setCurrentMonth(m => Math.max(1, m - 1))} disabled={currentMonth === 1}>← PREV</button>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: phaseColor, padding: '8px 14px', border: `1px solid ${phaseColor}40`, borderRadius: 8 }}>
+            M{currentMonth}
+          </span>
+          <button className="btn-secondary" style={{ padding: '8px 14px', fontSize: 11 }}
+            onClick={() => setCurrentMonth(m => Math.min(12, m + 1))} disabled={currentMonth === 12}>NEXT →</button>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'CURRENT PHASE', value: roadmap.phase, color: phaseColor, sub: roadmap.level },
+          { label: 'HOURS LOGGED', value: `${hoursLogged}h`, color: 'var(--green)', sub: 'Total study time' },
+          { label: 'STUDY STREAK', value: `${studyStreak}d`, color: 'var(--orange)', sub: lastStudyDate === today ? '✓ studied today' : 'not yet today' },
+          { label: 'SKILLS DONE', value: `${skillsProgress}%`, color: 'var(--purple)', sub: `${completedSkills.filter(s => roadmap.skills.includes(s)).length}/${roadmap.skills.length} this month` },
+        ].map(stat => (
+          <div key={stat.label} className="card" style={{ padding: 16, textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)', letterSpacing: 2, marginBottom: 8 }}>{stat.label}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: stat.color }}>{stat.value}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{stat.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Phase Progress Bar */}
+      <div className="card" style={{ marginBottom: 20, padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Month {currentMonth} Checkpoint Progress</span>
+          <span style={{ color: phaseColor }}>{checkpointProgress}% complete</span>
+        </div>
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${checkpointProgress}%`, background: phaseColor }} />
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {(['overview', 'skills', 'resources', 'tasks'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            padding: '10px 18px', borderRadius: 8, fontFamily: 'var(--font-display)', fontSize: 11,
+            fontWeight: 700, letterSpacing: 2, cursor: 'pointer', transition: 'all 0.2s',
+            background: activeTab === tab ? phaseColor : 'transparent',
+            border: `1px solid ${activeTab === tab ? phaseColor : 'var(--border)'}`,
+            color: activeTab === tab ? '#000' : 'var(--text-secondary)',
+          }}>
+            {tab.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* OVERVIEW TAB */}
+      {activeTab === 'overview' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          {/* Today's Tasks */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>📅 Today's Study Plan</div>
+            {roadmap.dailyTasks.map((task, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: phaseColor, flexShrink: 0, marginTop: 6 }} />
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>🔐 {task}</span>
+              </div>
+            ))}
+            <button className="btn-primary" style={{ width: '100%', marginTop: 16, background: phaseColor, borderColor: phaseColor }} onClick={markStudied}>
+              {lastStudyDate === today ? '✓ SESSION LOGGED TODAY' : 'LOG TODAY\'S SESSION (+3h)'}
+            </button>
+          </div>
+
+          {/* Project of the Month */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>🛠️ Month {currentMonth} Project</div>
+            <div style={{ padding: '16px', borderRadius: 10, background: `${phaseColor}10`, border: `1px solid ${phaseColor}30`, marginBottom: 16 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: phaseColor, letterSpacing: 2, marginBottom: 8 }}>BUILD THIS →</div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>{roadmap.project}</div>
+            </div>
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 12 }}>🏁 Checkpoints</div>
+            {roadmap.checkpoint.map((cp, i) => (
+              <div key={i} onClick={() => toggleCheckpoint(cp)} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, flexShrink: 0, marginTop: 2,
+                  border: `2px solid ${completedCheckpoints.includes(cp) ? phaseColor : 'var(--border)'}`,
+                  background: completedCheckpoints.includes(cp) ? phaseColor : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#000',
+                }}>{completedCheckpoints.includes(cp) ? '✓' : ''}</div>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: completedCheckpoints.includes(cp) ? phaseColor : 'var(--text-secondary)', lineHeight: 1.5, textDecoration: completedCheckpoints.includes(cp) ? 'line-through' : 'none' }}>{cp}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Tools */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>🔧 Tools This Month</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {roadmap.tools.map((tool, i) => (
+                <span key={i} style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${phaseColor}40`, background: `${phaseColor}10`, fontFamily: 'var(--font-mono)', fontSize: 11, color: phaseColor }}>
+                  {tool}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* 12-Month Roadmap Mini */}
+          <div className="card">
+            <div className="card-title" style={{ color: phaseColor, marginBottom: 16 }}>🗺️ 12-Month Roadmap</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              {CYBER_ROADMAP.map(m => (
+                <button key={m.month} onClick={() => setCurrentMonth(m.month)} style={{
+                  padding: '8px 4px', borderRadius: 6, textAlign: 'center', cursor: 'pointer',
+                  border: `1px solid ${m.month === currentMonth ? phaseColors[m.phase] : 'var(--border)'}`,
+                  background: m.month === currentMonth ? `${phaseColors[m.phase]}15` : 'transparent',
+                  transition: 'all 0.2s',
+                }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: m.month === currentMonth ? phaseColors[m.phase] : 'var(--text-secondary)' }}>M{m.month}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{m.phase.split(' ')[0]}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SKILLS TAB */}
+      {activeTab === 'skills' && (
+        <div className="card">
+          <div className="card-title" style={{ color: phaseColor, marginBottom: 6 }}>⚡ Skills — Month {currentMonth}: {roadmap.title}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            Click a skill to mark it as learned
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {roadmap.skills.map((skill, i) => {
+              const done = completedSkills.includes(skill);
+              return (
+                <div key={i} onClick={() => toggleSkill(skill)} style={{
+                  padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
+                  border: `1px solid ${done ? phaseColor + '60' : 'var(--border)'}`,
+                  background: done ? `${phaseColor}10` : 'var(--bg-secondary)',
+                  display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.2s',
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                    border: `2px solid ${done ? phaseColor : 'var(--border)'}`,
+                    background: done ? phaseColor : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, color: '#000', fontWeight: 700,
+                  }}>{done ? '✓' : ''}</div>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: done ? phaseColor : 'var(--text-primary)', lineHeight: 1.4 }}>{skill}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 20, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>
+            {completedSkills.filter(s => roadmap.skills.includes(s)).length} / {roadmap.skills.length} skills mastered this month — {skillsProgress}% complete
+          </div>
+        </div>
+      )}
+
+      {/* RESOURCES TAB */}
+      {activeTab === 'resources' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {roadmap.resources.map((r, i) => (
+            <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+              <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s', borderColor: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = phaseColor)}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: `${phaseColor}15`, border: `1px solid ${phaseColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                    {CYBER_RESOURCE_ICONS[r.type] || '🔗'}
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{r.name}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: phaseColor, textTransform: 'uppercase', letterSpacing: 1 }}>{r.type}</div>
+                  </div>
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>↗ Click to open</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* TASKS TAB */}
+      {activeTab === 'tasks' && (
+        <div className="card">
+          <div className="card-title" style={{ color: phaseColor, marginBottom: 8 }}>🗓️ Today's Cyber Tasks</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            Auto-synced to your main task manager under Work category.
+          </div>
+          {tasks.filter(t => t.category === 'work' && t.name.startsWith('🔐')).length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+              No cyber tasks for today yet.
+              <br /><br />
+              <button className="btn-primary" style={{ background: phaseColor, borderColor: phaseColor }} onClick={() => {
+                const times = ['09:00', '10:30', '13:00', '15:00'];
+                roadmap.dailyTasks.forEach((task, i) => {
+                  addTask({ name: `🔐 ${task}`, category: 'work', time: times[i] || '10:00' });
+                });
+                setTasksAddedDate(today);
+                notify('🔐 Cyber tasks added!', phaseColor);
+              }}>
+                + ADD TODAY'S CYBER TASKS
+              </button>
+            </div>
+          ) : (
+            tasks.filter(t => t.category === 'work' && t.name.startsWith('🔐')).map(task => (
+              <div key={task.id} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
+                borderBottom: '1px solid var(--border)', opacity: task.done ? 0.5 : 1,
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                  border: `2px solid ${task.done ? 'var(--green)' : phaseColor}`,
+                  background: task.done ? 'var(--green)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, color: '#000',
+                }}>{task.done ? '✓' : ''}</div>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-primary)', flex: 1, textDecoration: task.done ? 'line-through' : 'none' }}>{task.name}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>{task.time}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -1980,6 +2722,7 @@ export default function Dashboard() {
     { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
     { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
     { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
+    { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
     { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
   ];
 
@@ -2162,6 +2905,13 @@ export default function Dashboard() {
         {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
+        {activeNav === 'cyber' && (
+          <CyberSection
+            tasks={tasks}
+            addTask={addTask}
+            notify={notify}
+          />
+        )}
         {activeNav === 'settings' && <SettingsSection settings={settings} setSettings={app.setSettings} tasks={tasks} setTasks={app.setTasksRaw} habits={habitsWithProgress} setHabits={app.setHabitsRaw} quitDate={quitDate} setQuitDate={app.setQuitDate} />}
       </main>
 
