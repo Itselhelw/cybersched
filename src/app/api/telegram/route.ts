@@ -11,6 +11,10 @@ const pendingConfirmations = new Map<string, {
     timestamp: number;
 }>();
 
+export async function GET() {
+    return NextResponse.json({ status: 'Telegram API is live', method: 'GET' });
+}
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
