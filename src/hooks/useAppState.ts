@@ -189,17 +189,18 @@ export function useAppState(now: Date | null) {
     }, [tasks, dailyTimestamp, syncTaskToHabit]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
+        const date = dailyTimestamp ? todayStr(new Date(dailyTimestamp)) : new Date().toISOString().split('T')[0];
         const newTask: Task = {
             ...taskData,
             id: Date.now().toString(),
             done: false,
-            date: todayStr(now) || new Date().toISOString().split('T')[0],
+            date,
         };
         setTasksRaw(prev => [...prev, newTask].sort((a, b) => a.time.localeCompare(b.time)));
         logEvent('TASK_ADD', { name: taskData.name, category: taskData.category }, 'user');
         notify(`+ Task added to ${taskData.category}`, 'var(--cyan)');
         return newTask;
-    }, [now, setTasksRaw, logEvent, notify]);
+    }, [dailyTimestamp, setTasksRaw, logEvent, notify]);
 
     const deleteTask = useCallback((taskId: string) => {
         setTasksRaw(prev => prev.filter(t => t.id !== taskId));
@@ -207,7 +208,7 @@ export function useAppState(now: Date | null) {
     }, [setTasksRaw, logEvent]);
 
     const toggleHabit = useCallback((habitId: string) => {
-        const currentToday = todayStr(now);
+        const currentToday = dailyTimestamp ? todayStr(new Date(dailyTimestamp)) : '';
         if (!currentToday) return;
 
         setHabitsRaw(prev => prev.map(h => {
@@ -226,19 +227,20 @@ export function useAppState(now: Date | null) {
                 lastDone: nowDone ? currentToday : h.lastDone,
             };
         }));
-    }, [now, setHabitsRaw, logEvent, notify]);
+    }, [dailyTimestamp, setHabitsRaw, logEvent, notify]);
 
     // ── QUIT DATE ─────────────────────────────────────────────────
     const setQuitDate = useCallback((date: string) => {
         setQuitDateRaw(date);
         if (date) {
+            const currentToday = dailyTimestamp ? todayStr(new Date(dailyTimestamp)) : '';
             setHabitsRaw(prev => prev.map(h =>
-                h.id === 'quit' ? { ...h, todayDone: true, lastDone: todayStr(now) } : h
+                h.id === 'quit' ? { ...h, todayDone: true, lastDone: currentToday } : h
             ));
             logEvent('QUIT_DATE_SET', { date }, 'user');
             notify('🚭 Quit date set — No Smoke habit activated!', '#ff3366');
         }
-    }, [now, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
+    }, [dailyTimestamp, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
 
     // ── SMOKE STATS ───────────────────────────────────────────────
     // Memoize smoke stats by minute to prevent unnecessary re-renders every second

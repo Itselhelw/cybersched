@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Generate or retrieve permanent user ID
@@ -45,7 +45,7 @@ export function useSupabaseSync() {
     }
 
     // ── TASKS ─────────────────────────────────────────────
-    async function syncTasks(tasks: unknown[]) {
+    const syncTasks = useCallback(async (tasks: unknown[]) => {
         if (!userId) return;
         setSyncing(true);
         try {
@@ -64,9 +64,9 @@ export function useSupabaseSync() {
         } finally {
             setSyncing(false);
         }
-    }
+    }, [userId]);
 
-    async function loadTasks() {
+    const loadTasks = useCallback(async () => {
         if (!userId) return [];
         const { data, error } = await supabase
             .from('tasks')
@@ -75,10 +75,10 @@ export function useSupabaseSync() {
             .order('time', { ascending: true });
         if (error) { console.error(error); return []; }
         return data || [];
-    }
+    }, [userId]);
 
     // ── HABITS ────────────────────────────────────────────
-    async function syncHabits(habits: unknown[]) {
+    const syncHabits = useCallback(async (habits: unknown[]) => {
         if (!userId) return;
         setSyncing(true);
         try {
@@ -106,9 +106,9 @@ export function useSupabaseSync() {
         } finally {
             setSyncing(false);
         }
-    }
+    }, [userId]);
 
-    async function loadHabits() {
+    const loadHabits = useCallback(async () => {
         if (!userId) return [];
         const { data, error } = await supabase
             .from('habits')
@@ -127,10 +127,10 @@ export function useSupabaseSync() {
             totalDays: h.total_days,
             lastDone: h.last_done,
         }));
-    }
+    }, [userId]);
 
     // ── SETTINGS ──────────────────────────────────────────
-    async function syncSettings(settings: Record<string, unknown>, quitDate: string) {
+    const syncSettings = useCallback(async (settings: Record<string, unknown>, quitDate: string) => {
         if (!userId) return;
         try {
             await supabase.from('settings').upsert({
@@ -148,9 +148,9 @@ export function useSupabaseSync() {
         } catch (err) {
             console.error('Settings sync error:', err);
         }
-    }
+    }, [userId]);
 
-    async function loadSettings() {
+    const loadSettings = useCallback(async () => {
         if (!userId) return null;
         const { data, error } = await supabase
             .from('settings')
@@ -159,19 +159,19 @@ export function useSupabaseSync() {
             .single();
         if (error) { return null; }
         return data;
-    }
+    }, [userId]);
 
     // ── AI MEMORY ─────────────────────────────────────────
-    async function saveAIMessage(role: string, content: string) {
+    const saveAIMessage = useCallback(async (role: string, content: string) => {
         if (!userId) return;
         await supabase.from('ai_memory').insert({
             user_id: userId,
             role,
             content,
         });
-    }
+    }, [userId]);
 
-    async function loadAIMemory(limit = 20) {
+    const loadAIMemory = useCallback(async (limit = 20) => {
         if (!userId) return [];
         const { data, error } = await supabase
             .from('ai_memory')
@@ -185,15 +185,15 @@ export function useSupabaseSync() {
             content: m.content,
             timestamp: new Date(m.created_at).toTimeString().slice(0, 5),
         }));
-    }
+    }, [userId]);
 
-    async function clearAIMemory() {
+    const clearAIMemory = useCallback(async () => {
         if (!userId) return;
         await supabase.from('ai_memory').delete().eq('user_id', userId);
-    }
+    }, [userId]);
 
     // ── WEEKLY SCHEDULE ───────────────────────────────────
-    async function syncSchedule(schedule: unknown) {
+    const syncSchedule = useCallback(async (schedule: unknown) => {
         if (!userId) return;
         const weekStart = new Date();
         weekStart.setDate(weekStart.getDate() - weekStart.getDay());
@@ -204,9 +204,9 @@ export function useSupabaseSync() {
             schedule_json: schedule,
             week_start: weekStartStr,
         }, { onConflict: 'user_id' });
-    }
+    }, [userId]);
 
-    async function loadSchedule() {
+    const loadSchedule = useCallback(async () => {
         if (!userId) return null;
         const { data } = await supabase
             .from('weekly_schedule')
@@ -216,7 +216,7 @@ export function useSupabaseSync() {
             .limit(1)
             .single();
         return data?.schedule_json || null;
-    }
+    }, [userId]);
 
     return {
         userId,
