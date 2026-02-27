@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -687,7 +687,7 @@ const DEFAULT_HABITS: Habit[] = [
   { id: 'fun', label: 'Balanced', icon: '🎮', color: '#9d4edd', streak: 5, bestStreak: 5, todayDone: false, weekProgress: 50, totalDays: 5, lastDone: '' },
 ];
 
-function HabitRing({ progress, color, size = 56 }: { progress: number; color: string; size?: number }) {
+const HabitRing = memo(function HabitRing({ progress, color, size = 56 }: { progress: number; color: string; size?: number }) {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (progress / 100) * circ;
@@ -699,7 +699,7 @@ function HabitRing({ progress, color, size = 56 }: { progress: number; color: st
         style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
     </svg>
   );
-}
+});
 
 function NotificationToast({ notifications }: {
   notifications: { id: string; message: string; color: string }[]
@@ -729,7 +729,7 @@ function NotificationToast({ notifications }: {
 }
 
 // ── TASKS SECTION ─────────────────────────────────────────────────
-function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
+const TasksSection = memo(function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<Category | 'all'>('all');
   const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
@@ -856,10 +856,10 @@ function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; set
       )}
     </div>
   );
-}
+});
 
 // ── HABITS SECTION ────────────────────────────────────────────────
-function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
+const HabitsSection = memo(function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
   function toggle(id: string) {
     toggleHabit(id);
   }
@@ -936,7 +936,7 @@ function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; se
       </div>
     </div>
   );
-}
+});
 
 // ── QUIT COUNTER CARD ─────────────────────────────────────────────
 function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
@@ -1064,7 +1064,7 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
 }
 
 // ── STATS SECTION ─────────────────────────────────────────────────
-function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
+const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
   const completed = tasks.filter(t => t.done).length;
   const total = tasks.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -1134,10 +1134,10 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
       </div>
     </div>
   );
-}
+});
 
 // ── ANALYTICS SECTION ──────────────────────────────────────────────
-function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
+const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
   const weeklyData = getWeeklyProgressData(tasks);
@@ -1245,10 +1245,10 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
       <StreakRanking data={streakData} />
     </div>
   );
-}
+});
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
   addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
   notify: (msg: string, color?: string) => void;
   aiSchedule: any;
@@ -1450,7 +1450,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
       )}
     </div>
   );
-}
+});
 
 // ── GERMAN TRANSLATIONS ──────────────────────────────────────────
 const GRAMMAR_ARABIC: Record<string, string> = {
@@ -1489,7 +1489,7 @@ const DAILY_TASKS_ARABIC: Record<string, string> = {
 };
 
 // ── GERMAN SECTION ────────────────────────────────────────────────
-function GermanSection({
+const GermanSection = memo(function GermanSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -1818,7 +1818,7 @@ function GermanSection({
       )}
     </div>
   );
-}
+});
 
 // ── SETTINGS SECTION ──────────────────────────────────────────────
 function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
@@ -2310,7 +2310,7 @@ function AIChatController({
 }
 
 
-function CyberSection({
+const CyberSection = memo(function CyberSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -2620,7 +2620,7 @@ function CyberSection({
       )}
     </div>
   );
-}
+});
 
 // ── MAIN APP ──────────────────────────────────────────────────────
 
@@ -2854,7 +2854,7 @@ export default function Dashboard() {
                     <div className="card-title">{"// Today's Mission"}</div>
                     <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
                   </div>
-                  {tasks.filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a: any, b: any) => a.time.localeCompare(b.time)).map((task: any) => (
+                  {app.todayTasks.map((task: any) => (
                     <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => completeTask(task.id)}>
                       <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
                       <div className="task-info">
