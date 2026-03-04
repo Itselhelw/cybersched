@@ -5,3 +5,7 @@
 ## 2026-02-23 - Set-based Lookup for Habit Progress
 **Learning:** Iterating over tasks with `.some()` inside a loop (like habit categories or week dates) leads to O(N*M) complexity. Pre-calculating a `Set` of completed task identifiers (`category:date`) allows for O(1) lookups, significantly improving performance when the task list grows.
 **Action:** Pre-process task arrays into `Set` or `Map` data structures before performing repeated lookups in loops.
+
+## 2026-02-23 - Hook Stabilization for Component Memoization
+**Learning:** Component-level `React.memo` is ineffective if the central state hook returns unstable callbacks. Functions like `addTask` or `toggleHabit` that depend on a per-second clock (`now`) will be recreated every tick, breaking the memoization of any component receiving them as props.
+**Action:** Use memoized derived markers (e.g., `currentTodayStr` or `dailyTimestamp`) as dependencies for `useCallback` in central hooks to ensure returned function references remain stable across clock ticks.
