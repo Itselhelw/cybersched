@@ -1,11 +1,6 @@
 'use client';
 
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-interface ChartProps {
-  data: any[];
-  title: string;
-}
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
   return (

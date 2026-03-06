@@ -106,7 +106,12 @@ Rules:
       clean = clean.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
 
       const parsed = JSON.parse(clean);
-      return NextResponse.json(parsed);
+      // Normalize: LLM returns { schedule: [...] } but frontend expects { week: [...] }
+      const normalized = {
+        week: parsed.week || parsed.schedule || [],
+        weekInsight: parsed.weekInsight || '',
+      };
+      return NextResponse.json(normalized);
     } catch (err) {
       console.error('Schedule parse error:', err);
       return NextResponse.json({

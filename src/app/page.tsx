@@ -656,15 +656,18 @@ const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }
 };
 
 function todayStr(baseDate?: Date | null) {
-  return baseDate ? baseDate.toISOString().split('T')[0] : '';
+  if (baseDate) return baseDate.toISOString().split('T')[0];
+  // Fallback to current date (client-only) for contexts where no Date is passed
+  if (typeof window !== 'undefined') return new Date().toISOString().split('T')[0];
+  return '';
 }
 
-function getWeekDates(baseDate?: Date | null) {
-  const today = baseDate || new Date('2026-02-23'); // Fallback to a stable date for both SSR and initial client pass
-  const day = today.getDay();
+function getWeekDates(baseDate?: Date | null): Date[] | null {
+  if (!baseDate) return null; // Return null during SSR to avoid hydration mismatch
+  const day = baseDate.getDay();
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - day + i);
+    const d = new Date(baseDate);
+    d.setDate(baseDate.getDate() - day + i);
     return d;
   });
 }
@@ -945,6 +948,7 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
   smokeStats: SmokeStats;
 }) {
   const [maxDate, setMaxDate] = useState('');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     setMaxDate(new Date().toISOString().split('T')[0]);
@@ -966,7 +970,7 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
         <div className="card-title" style={{ color: 'var(--green)' }}>// Quit Counter</div>
         {quitDate && (
           <button className="card-action" style={{ color: 'var(--red)' }}
-            onClick={() => { if (confirm('Reset quit date?')) setQuitDate(''); }}>
+            onClick={() => setShowResetConfirm(true)}>
             RESET
           </button>
         )}
@@ -1056,6 +1060,22 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
                 <span>{smokeStats.days >= ms.days ? '✅' : `${ms.days - smokeStats.days}d`}</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reset Confirmation Dialog */}
+      {showResetConfirm && (
+        <div className="modal-overlay" onClick={() => setShowResetConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
+            <div className="modal-title" style={{ color: 'var(--red)' }}>⚠️ RESET QUIT DATE</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>
+              This will reset your {smokeStats.days}-day streak and all saved progress. This action cannot be undone.
+            </div>
+            <div className="modal-actions">
+              <button className="btn-primary" style={{ background: 'var(--red)', flex: 1 }} onClick={() => { setQuitDate(''); setShowResetConfirm(false); }}>YES, RESET</button>
+              <button className="btn-secondary" onClick={() => setShowResetConfirm(false)}>CANCEL</button>
+            </div>
           </div>
         </div>
       )}
@@ -1277,7 +1297,9 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, germanMonth }),
       });
-      const data = await res.json();
+      const rawData = await res.json();
+      // Normalize: API returns { schedule: [...] } but UI expects { week: [...] }
+      const data = rawData.week ? rawData : { ...rawData, week: rawData.schedule || [] };
       setAiSchedule(data);
       setShowForm(false);
 
@@ -1373,7 +1395,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
             <span className="card-action">Click Generate to use AI</span>
           </div>
           <div className="week-grid">
-            {weekDates.map((date, i) => (
+            {weekDates ? weekDates.map((date, i) => (
               <div key={i} className="day-col">
                 <div className="day-header">
                   <div className="day-name">{DAYS[date.getDay()]}</div>
@@ -1383,7 +1405,9 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
                   <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
                 ))}
               </div>
-            ))}
+            )) : (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', padding: 16 }}>Loading schedule...</div>
+            )}
           </div>
         </div>
       )}
@@ -1521,7 +1545,8 @@ function GermanSection({
       setTasksAddedDate(today);
       notify('🇩🇪 German study tasks added for today!', 'var(--cyan)');
     }
-  }, [today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today, tasksAddedDate]);
 
   function markStudied() {
     if (lastStudyDate === today) return;
@@ -1914,7 +1939,7 @@ function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goal
 
   useEffect(() => {
     if (hasGenerated.current) return; // prevent double-fire
-    const today = todayStr();
+    const today = new Date().toISOString().split('T')[0];
     if (motivDate !== today) {
       hasGenerated.current = true;
       setLoading(true);
@@ -1952,17 +1977,19 @@ function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goal
 }
 
 // ── POMODORO TIMER ────────────────────────────────────────────────
+const POMODORO_MODES = {
+  work: { label: 'WORK', time: 25 * 60, color: 'var(--cyan)' },
+  shortBreak: { label: 'SHORT BREAK', time: 5 * 60, color: 'var(--orange)' },
+  longBreak: { label: 'LONG BREAK', time: 15 * 60, color: 'var(--green)' },
+} as const;
+
 function PomodoroTimer() {
   const [count, setCount] = useLocalStorage<number>('cybersched-pomodoros', 0);
   const [mode, setMode] = useState<'work' | 'shortBreak' | 'longBreak'>('work');
   const [time, setTime] = useState(25 * 60);
   const [running, setRunning] = useState(false);
 
-  const modes = {
-    work: { label: 'WORK', time: 25 * 60, color: 'var(--cyan)' },
-    shortBreak: { label: 'SHORT BREAK', time: 5 * 60, color: 'var(--orange)' },
-    longBreak: { label: 'LONG BREAK', time: 15 * 60, color: 'var(--green)' },
-  };
+  const modes = POMODORO_MODES;
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -2344,7 +2371,8 @@ function CyberSection({
       setTasksAddedDate(today);
       notify('🔐 Cybersecurity tasks added for today!', phaseColor);
     }
-  }, [today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today, tasksAddedDate]);
 
   function markStudied() {
     if (lastStudyDate === today) return;
@@ -2689,25 +2717,24 @@ export default function Dashboard() {
 
   // Auto-refresh at midnight - clears done tasks and adds new day
   const { setTasksRaw, setHabitsRaw, notify: appNotify } = app;
+  const [lastActiveDate, setLastActiveDate] = useLocalStorage<string>('cs-last-active-date', '');
   useEffect(() => {
     const checkMidnight = () => {
-      const nowTime = new Date();
-      const lastDate = localStorage.getItem('cs-last-active-date');
-      const today = nowTime.toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
 
-      if (lastDate && lastDate !== today) {
+      if (lastActiveDate && lastActiveDate !== today) {
         // New day detected
         // 1 — Clear yesterday's completed tasks
-        setTasksRaw(prev => prev.filter((t: any) => !t.done));
+        setTasksRaw(prev => prev.filter((t: Task) => !t.done));
 
         // 2 — Reset habit todayDone flags for new day
-        setHabitsRaw(prev => prev.map((h: any) => ({ ...h, todayDone: false })));
+        setHabitsRaw(prev => prev.map((h: Habit) => ({ ...h, todayDone: false })));
 
         // 3 — Notify user
         appNotify('🌅 New day started — habits reset, completed tasks cleared!', 'var(--cyan)');
       }
 
-      localStorage.setItem('cs-last-active-date', today);
+      setLastActiveDate(today);
     };
 
     // Check immediately on load
@@ -2716,7 +2743,8 @@ export default function Dashboard() {
     // Then check every minute
     const interval = setInterval(checkMidnight, 60000);
     return () => clearInterval(interval);
-  }, [setTasksRaw, setHabitsRaw, appNotify]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastActiveDate]);
 
   const {
     tasks, habits, habitsWithProgress,
@@ -2877,7 +2905,7 @@ export default function Dashboard() {
                     <span className="card-action">AI-Generated</span>
                   </div>
                   <div className="week-grid">
-                    {weekDates.map((date, i) => (
+                    {weekDates ? weekDates.map((date, i) => (
                       <div key={i} className="day-col">
                         <div className="day-header">
                           <div className="day-name">{DAYS[date.getDay()]}</div>
@@ -2887,7 +2915,9 @@ export default function Dashboard() {
                           <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
                         ))}
                       </div>
-                    ))}
+                    )) : (
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', padding: 16 }}>Loading schedule...</div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -38,6 +38,7 @@ export interface Habit {
     weekProgress: number;
     totalDays: number;
     lastDone: string;
+    isCustom?: boolean;
 }
 
 export interface AppEvent {
@@ -143,8 +144,11 @@ export function useAppState(now: Date | null) {
             const wasAlreadyDone = h.todayDone;
             const todayDone = doneTaskMap.has(`${category}:${currentToday}`);
 
-            const newStreak = todayDone && !wasAlreadyDone ? h.streak + 1 : (todayDone ? h.streak : h.streak);
-            // Note: streak logic might need refinement for "losing" streak if not done, but user focused on increments.
+            // Streak logic: increment if newly done today, keep if already done, keep if not yet evaluated today
+            let newStreak = h.streak;
+            if (todayDone && !wasAlreadyDone) {
+                newStreak = h.streak + 1;
+            }
 
             const bestStreak = Math.max(newStreak, h.bestStreak);
             const totalDays = todayDone && !wasAlreadyDone ? h.totalDays + 1 : h.totalDays;
