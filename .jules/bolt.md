@@ -5,3 +5,7 @@
 ## 2026-02-23 - Set-based Lookup for Habit Progress
 **Learning:** Iterating over tasks with `.some()` inside a loop (like habit categories or week dates) leads to O(N*M) complexity. Pre-calculating a `Set` of completed task identifiers (`category:date`) allows for O(1) lookups, significantly improving performance when the task list grows.
 **Action:** Pre-process task arrays into `Set` or `Map` data structures before performing repeated lookups in loops.
+
+## 2026-02-23 - Eliminating Per-Second Dashboard Re-renders
+**Learning:** In applications with a central per-second clock (for time display or timers), every component will re-render every second unless protected by `React.memo`. However, `memo` is only effective if the props are stable. Passing the raw `now` Date object or unmemoized derived objects (like task filters or score calculations) to children breaks memoization.
+**Action:** Consolidate high-frequency updates (clock) and derive stable daily markers (`currentTodayStr`, `dailyDate`) to use as dependencies for `useMemo` and props for `memo()` components.
