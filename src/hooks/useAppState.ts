@@ -263,7 +263,9 @@ export function useAppState(now: Date | null) {
     const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
 
     const todayTasks = useMemo(() =>
-        tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')),
+        tasks
+            .filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''))
+            .sort((a, b) => a.time.localeCompare(b.time)),
         [tasks, currentTodayStr]
     );
 
