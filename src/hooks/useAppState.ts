@@ -123,7 +123,7 @@ export function useAppState(now: Date | null) {
     // Memoize the daily timestamp to stabilize callbacks and effects
     const dailyTimestamp = now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0;
 
-    const syncTaskToHabit = useCallback((category: Category) => {
+    const syncTaskToHabit = useCallback((category?: Category) => {
         if (!dailyTimestamp) return;
         const currentToday = todayStr(new Date(dailyTimestamp));
 
@@ -135,14 +135,19 @@ export function useAppState(now: Date | null) {
 
         const doneTaskMap = new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
 
-        // Update habits based on current tasks
+        // Update habits based on current tasks in a single pass
         setHabitsRaw(prev => prev.map(h => {
-            if (h.id !== category) return h;
+            // If a specific category is requested, only sync that one
+            if (category && h.id !== category) return h;
 
-            const weekProgress = calcWeekProgress(category, weekDates, doneTaskMap);
+            // Only sync habits that correspond to core task categories
+            if (!['body', 'mind', 'work', 'quit', 'fun'].includes(h.id)) return h;
+
+            const hCategory = h.id as Category;
+            const weekProgress = calcWeekProgress(hCategory, weekDates, doneTaskMap);
 
             const wasAlreadyDone = h.todayDone;
-            const todayDone = doneTaskMap.has(`${category}:${currentToday}`);
+            const todayDone = doneTaskMap.has(`${hCategory}:${currentToday}`);
 
             // Streak logic: increment if newly done today, keep if already done, keep if not yet evaluated today
             let newStreak = h.streak;
@@ -188,8 +193,7 @@ export function useAppState(now: Date | null) {
     // Sync effect when tasks change - only sync when tasks or day changes
     useEffect(() => {
         if (!dailyTimestamp) return;
-        const categories: Category[] = ['body', 'mind', 'work', 'quit', 'fun'];
-        categories.forEach(cat => syncTaskToHabit(cat));
+        syncTaskToHabit();
     }, [tasks, dailyTimestamp, syncTaskToHabit]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
