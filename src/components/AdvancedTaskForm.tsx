@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface AdvancedTaskFormProps {
   onSubmit: (taskData: any) => void;
   onCancel: () => void;
 }
 
-export function AdvancedTaskForm({ onSubmit, onCancel }: AdvancedTaskFormProps) {
+export const AdvancedTaskForm = React.memo(function AdvancedTaskForm({ onSubmit, onCancel }: AdvancedTaskFormProps) {
   const [form, setForm] = useState({
     name: '',
     category: 'body',
@@ -251,4 +251,4 @@ export function AdvancedTaskForm({ onSubmit, onCancel }: AdvancedTaskFormProps) 
       </div>
     </form>
   );
-}
+});
