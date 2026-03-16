@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 
 interface Notification {
   id: string;
@@ -17,7 +17,7 @@ interface NotificationCenterProps {
   settings: any;
 }
 
-export default function NotificationCenter({ tasks, habits, settings }: NotificationCenterProps) {
+const NotificationCenter = memo(function NotificationCenter({ tasks, habits, settings }: NotificationCenterProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showPanel, setShowPanel] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'tasks' | 'habits'>('all');
@@ -414,4 +414,6 @@ export default function NotificationCenter({ tasks, habits, settings }: Notifica
       )}
     </>
   );
-}
+});
+
+export default NotificationCenter;

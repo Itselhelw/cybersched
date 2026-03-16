@@ -123,7 +123,7 @@ export function useAppState(now: Date | null) {
     // Memoize the daily timestamp to stabilize callbacks and effects
     const dailyTimestamp = now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0;
 
-    const syncTaskToHabit = useCallback((category: Category) => {
+    const syncTasksToHabits = useCallback((category?: Category) => {
         if (!dailyTimestamp) return;
         const currentToday = todayStr(new Date(dailyTimestamp));
 
@@ -137,12 +137,14 @@ export function useAppState(now: Date | null) {
 
         // Update habits based on current tasks
         setHabitsRaw(prev => prev.map(h => {
-            if (h.id !== category) return h;
+            // If category is provided, only sync that one. Otherwise sync all.
+            if (category && h.id !== category) return h;
 
-            const weekProgress = calcWeekProgress(category, weekDates, doneTaskMap);
+            const cat = h.id as Category;
+            const weekProgress = calcWeekProgress(cat, weekDates, doneTaskMap);
 
             const wasAlreadyDone = h.todayDone;
-            const todayDone = doneTaskMap.has(`${category}:${currentToday}`);
+            const todayDone = doneTaskMap.has(`${cat}:${currentToday}`);
 
             // Streak logic: increment if newly done today, keep if already done, keep if not yet evaluated today
             let newStreak = h.streak;
@@ -187,10 +189,8 @@ export function useAppState(now: Date | null) {
 
     // Sync effect when tasks change - only sync when tasks or day changes
     useEffect(() => {
-        if (!dailyTimestamp) return;
-        const categories: Category[] = ['body', 'mind', 'work', 'quit', 'fun'];
-        categories.forEach(cat => syncTaskToHabit(cat));
-    }, [tasks, dailyTimestamp, syncTaskToHabit]);
+        syncTasksToHabits();
+    }, [syncTasksToHabits]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
@@ -321,7 +321,7 @@ export function useAppState(now: Date | null) {
         // Actions
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
-        toggleHabit, syncTaskToHabit,
+        toggleHabit, syncTaskToHabit: syncTasksToHabits,
         setQuitDate, setSettings, setOnboarded,
         notify, logEvent,
     }), [
@@ -332,7 +332,7 @@ export function useAppState(now: Date | null) {
         habitsWithProgress,
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
-        toggleHabit, syncTaskToHabit,
+        toggleHabit, syncTasksToHabits,
         setQuitDate, setSettings, setOnboarded,
         notify, logEvent
     ]);
