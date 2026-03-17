@@ -1,8 +1,9 @@
 'use client';
 
+import React, { memo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
+export const WeeklyProgressChart = memo(function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -21,9 +22,9 @@ export function WeeklyProgressChart({ data }: { data: Array<{ day: string; compl
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
+export const CategoryBreakdownChart = memo(function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -42,9 +43,9 @@ export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; c
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+export const StreakRanking = memo(function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -65,9 +66,9 @@ export function StreakRanking({ data }: { data: Array<{ name: string; streak: nu
       </div>
     </div>
   );
-}
+});
 
-export function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
+export const CompletionDonut = memo(function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
   const data = [
     { name: 'Completed', value: stats.completed, color: '#00ff88' },
     { name: 'Pending', value: stats.pending, color: '#6b6b8a' },
@@ -97,4 +98,4 @@ export function CompletionDonut({ stats }: { stats: { total: number; completed: 
       </div>
     </div>
   );
-}
+});
