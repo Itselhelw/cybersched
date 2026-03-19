@@ -1,13 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, memo } from 'react';
 
 interface AdvancedTaskFormProps {
   onSubmit: (taskData: any) => void;
   onCancel: () => void;
 }
 
-export function AdvancedTaskForm({ onSubmit, onCancel }: AdvancedTaskFormProps) {
+/**
+ * AdvancedTaskForm allows users to create tasks with more details.
+ * Wrapped in memo() to provide performance benefits when dashboard state updates.
+ */
+export const AdvancedTaskForm = memo(function AdvancedTaskForm({ onSubmit, onCancel }: AdvancedTaskFormProps) {
   const [form, setForm] = useState({
     name: '',
     category: 'body',
@@ -251,4 +255,4 @@ export function AdvancedTaskForm({ onSubmit, onCancel }: AdvancedTaskFormProps) 
       </div>
     </form>
   );
-}
+});

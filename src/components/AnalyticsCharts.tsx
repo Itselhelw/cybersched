@@ -1,8 +1,13 @@
 'use client';
 
+import React, { memo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
+/**
+ * WeeklyProgressChart visualizes task completion over the current week.
+ * Wrapped in memo() to prevent expensive re-renders on every clock tick.
+ */
+export const WeeklyProgressChart = memo(function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -21,9 +26,13 @@ export function WeeklyProgressChart({ data }: { data: Array<{ day: string; compl
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
+/**
+ * CategoryBreakdownChart shows task distribution across life categories.
+ * Wrapped in memo() to optimize performance by only re-rendering when data changes.
+ */
+export const CategoryBreakdownChart = memo(function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -42,9 +51,13 @@ export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; c
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+/**
+ * StreakRanking compares current streaks across different habits.
+ * Wrapped in memo() to provide consistent performance benefits in the dashboard.
+ */
+export const StreakRanking = memo(function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -65,9 +78,13 @@ export function StreakRanking({ data }: { data: Array<{ name: string; streak: nu
       </div>
     </div>
   );
-}
+});
 
-export function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
+/**
+ * CompletionDonut provides a high-level view of overall task completion.
+ * Wrapped in memo() to prevent redundant re-renders from the per-second clock.
+ */
+export const CompletionDonut = memo(function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
   const data = [
     { name: 'Completed', value: stats.completed, color: '#00ff88' },
     { name: 'Pending', value: stats.pending, color: '#6b6b8a' },
@@ -97,4 +114,4 @@ export function CompletionDonut({ stats }: { stats: { total: number; completed: 
       </div>
     </div>
   );
-}
+});

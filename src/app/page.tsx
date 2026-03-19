@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -732,19 +732,29 @@ function NotificationToast({ notifications }: {
 }
 
 // ── TASKS SECTION ─────────────────────────────────────────────────
-function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
+/**
+ * TasksSection handles manual task entry and list management.
+ * Wrapped in memo() to prevent re-renders from the dashboard's per-second clock.
+ */
+const TasksSection = memo(function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<Category | 'all'>('all');
   const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
 
-  function toggleTask(id: string) { setTasks((prev: Task[]) => prev.map(t => t.id === id ? { ...t, done: !t.done } : t)); }
-  function deleteTask(id: string) { setTasks((prev: Task[]) => prev.filter(t => t.id !== id)); }
-  function addTask() {
+  const toggleTask = useCallback((id: string) => {
+    setTasks((prev: Task[]) => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  }, [setTasks]);
+
+  const deleteTask = useCallback((id: string) => {
+    setTasks((prev: Task[]) => prev.filter(t => t.id !== id));
+  }, [setTasks]);
+
+  const addTask = useCallback(() => {
     if (!newTask.name.trim()) return;
     setTasks((prev: Task[]) => [...prev, { id: Date.now().toString(), ...newTask, done: false, date: currentTodayStr || new Date().toISOString().split('T')[0] }].sort((a, b) => a.time.localeCompare(b.time)));
     setNewTask({ name: '', category: 'body', time: '09:00' });
     setShowAdd(false);
-  }
+  }, [newTask, currentTodayStr, setTasks]);
 
   const filtered = tasks.filter(t => filter === 'all' ? true : t.category === filter);
   const done = filtered.filter(t => t.done).length;
@@ -859,15 +869,19 @@ function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; set
       )}
     </div>
   );
-}
+});
 
 // ── HABITS SECTION ────────────────────────────────────────────────
-function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
-  function toggle(id: string) {
+/**
+ * HabitsSection displays habit rings and handles custom habit management.
+ * Wrapped in memo() to optimize dashboard performance.
+ */
+const HabitsSection = memo(function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
+  const toggle = useCallback((id: string) => {
     toggleHabit(id);
-  }
+  }, [toggleHabit]);
 
-  const handleAddHabit = (newHabit: any) => {
+  const handleAddHabit = useCallback((newHabit: any) => {
     setHabits((prev: Habit[]) => [...prev, {
       id: newHabit.id as Category,
       label: newHabit.label,
@@ -881,15 +895,15 @@ function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; se
       lastDone: '',
       isCustom: true,
     }]);
-  };
+  }, [setHabits]);
 
-  const handleDeleteHabit = (habitId: string) => {
+  const handleDeleteHabit = useCallback((habitId: string) => {
     setHabits((prev: Habit[]) => prev.filter(h => h.id !== habitId));
-  };
+  }, [setHabits]);
 
-  const handleUpdateHabit = (habitId: string, updates: any) => {
+  const handleUpdateHabit = useCallback((habitId: string, updates: any) => {
     setHabits((prev: Habit[]) => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
-  };
+  }, [setHabits]);
 
   return (
     <div>
@@ -939,7 +953,7 @@ function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; se
       </div>
     </div>
   );
-}
+});
 
 // ── QUIT COUNTER CARD ─────────────────────────────────────────────
 function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
@@ -1084,7 +1098,11 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
 }
 
 // ── STATS SECTION ─────────────────────────────────────────────────
-function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
+/**
+ * StatsSection provides a breakdown of task completion and smoke-free milestones.
+ * Wrapped in memo() to prevent redundant re-renders from the per-second clock.
+ */
+const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
   const completed = tasks.filter(t => t.done).length;
   const total = tasks.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -1154,10 +1172,14 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
       </div>
     </div>
   );
-}
+});
 
 // ── ANALYTICS SECTION ──────────────────────────────────────────────
-function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
+/**
+ * AnalyticsSection visualizes long-term trends and handles data exports.
+ * Wrapped in memo() to prevent expensive re-renders on every clock tick.
+ */
+const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
   const weeklyData = getWeeklyProgressData(tasks);
@@ -1165,7 +1187,7 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
   const streakData = getStreakHistory(habits);
   const completionStats = getCompletionStats(tasks);
 
-  async function handleExportPDF() {
+  const handleExportPDF = useCallback(async () => {
     setLoading(true);
     try {
       await exportDataToPDF(tasks, habits, settings, smokeStats);
@@ -1174,7 +1196,7 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
     } finally {
       setLoading(false);
     }
-  }
+  }, [tasks, habits, settings, smokeStats]);
 
   return (
     <div>
@@ -1187,7 +1209,7 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
       {/* Export Buttons */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
         <button
-          onClick={() => exportTasksToCSV(tasks)}
+          onClick={useCallback(() => exportTasksToCSV(tasks), [tasks])}
           style={{
             padding: '12px 16px',
             background: 'linear-gradient(135deg, #00ff88, #00cc6a)',
@@ -1204,7 +1226,7 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
           📥 Tasks CSV
         </button>
         <button
-          onClick={() => exportHabitsToCSV(habits)}
+          onClick={useCallback(() => exportHabitsToCSV(habits), [habits])}
           style={{
             padding: '12px 16px',
             background: 'linear-gradient(135deg, #00f5ff, #0099cc)',
@@ -1221,7 +1243,7 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
           📥 Habits CSV
         </button>
         <button
-          onClick={() => exportAllDataToCSV(tasks, habits)}
+          onClick={useCallback(() => exportAllDataToCSV(tasks, habits), [tasks, habits])}
           style={{
             padding: '12px 16px',
             background: 'linear-gradient(135deg, #ff8c00, #ff6600)',
@@ -1265,29 +1287,29 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
       <StreakRanking data={streakData} />
     </div>
   );
-}
+});
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+/**
+ * PlannerSection generates and displays the AI weekly schedule.
+ * Refactored to accept a stable dailyDate instead of using an internal per-second interval.
+ * Wrapped in memo() to prevent redundant re-renders.
+ */
+const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule, dailyDate }: {
   addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
   notify: (msg: string, color?: string) => void;
   aiSchedule: any;
   setAiSchedule: (s: any) => void;
+  dailyDate: Date | null;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
-  const weekDates = getWeekDates(now);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const weekDates = getWeekDates(dailyDate);
   const [loading, setLoading] = useState(false);
   const [germanMonth] = useLocalStorage<number>('german-month', 1);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ wakeTime: '07:00', sleepTime: '23:00', gymDays: '3', workHours: '4', energyType: 'morning', goals: '' });
 
-  async function generateSchedule() {
+  const generateSchedule = useCallback(async () => {
     if (!form.goals.trim()) { setError('Please describe your goals first.'); return; }
     setLoading(true);
     setError('');
@@ -1324,7 +1346,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
     } finally {
       setLoading(false);
     }
-  }
+  }, [form, germanMonth, setAiSchedule, addTask, notify]);
 
   const categoryColor: Record<string, string> = {
     body: '#00ff88', mind: '#00f5ff', work: '#ff8c00', quit: '#ff3366', fun: '#9d4edd',
@@ -1399,7 +1421,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
               <div key={i} className="day-col">
                 <div className="day-header">
                   <div className="day-name">{DAYS[date.getDay()]}</div>
-                  <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
+                  <div className={`day-num ${dailyDate && date.getDay() === dailyDate.getDay() && date.getDate() === dailyDate.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
                 </div>
                 {(WEEK_SCHEDULE[i] || []).map((block, j) => (
                   <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
@@ -1474,7 +1496,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
       )}
     </div>
   );
-}
+});
 
 // ── GERMAN TRANSLATIONS ──────────────────────────────────────────
 const GRAMMAR_ARABIC: Record<string, string> = {
@@ -1513,7 +1535,11 @@ const DAILY_TASKS_ARABIC: Record<string, string> = {
 };
 
 // ── GERMAN SECTION ────────────────────────────────────────────────
-function GermanSection({
+/**
+ * GermanSection manages the German language learning roadmap and daily study tasks.
+ * Wrapped in memo() to prevent re-renders on every clock tick.
+ */
+const GermanSection = memo(function GermanSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -1548,7 +1574,7 @@ function GermanSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today, tasksAddedDate]);
 
-  function markStudied() {
+  const markStudied = useCallback(() => {
     if (lastStudyDate === today) return;
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -1557,13 +1583,13 @@ function GermanSection({
     setLastStudyDate(today);
     setWordsLearned(w => w + 10);
     notify('🔥 Study streak updated! +10 words logged', 'var(--green)');
-  }
+  }, [lastStudyDate, today, studyStreak, setStudyStreak, setLastStudyDate, setWordsLearned, notify]);
 
-  function toggleTopic(topic: string) {
+  const toggleTopic = useCallback((topic: string) => {
     setCompletedTopics(prev =>
       prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]
     );
-  }
+  }, [setCompletedTopics]);
 
   const phaseColors: Record<string, string> = {
     Foundation: 'var(--green)',
@@ -1843,17 +1869,21 @@ function GermanSection({
       )}
     </div>
   );
-}
+});
 
 // ── SETTINGS SECTION ──────────────────────────────────────────────
-function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
+/**
+ * SettingsSection allows customization of user profile and cloud sync options.
+ * Wrapped in memo() to provide a stable UI during dashboard clock updates.
+ */
+const SettingsSection = memo(function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
   const [edited, setEdited] = useState(false);
   const [form, setForm] = useState(settings);
 
-  function save() {
+  const save = useCallback(() => {
     setSettings(form);
     setEdited(false);
-  }
+  }, [form, setSettings]);
 
   return (
     <div>
@@ -1922,7 +1952,7 @@ function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHa
       </div>
     </div>
   );
-}
+});
 
 // ── AI MOTIVATION CARD ────────────────────────────────────────────
 function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goals }: {
@@ -2337,7 +2367,11 @@ function AIChatController({
 }
 
 
-function CyberSection({
+/**
+ * CyberSection provides the cybersecurity pentesting roadmap and daily tasks.
+ * Wrapped in memo() to optimize dashboard performance.
+ */
+const CyberSection = memo(function CyberSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -2374,7 +2408,7 @@ function CyberSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today, tasksAddedDate]);
 
-  function markStudied() {
+  const markStudied = useCallback(() => {
     if (lastStudyDate === today) return;
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -2383,19 +2417,19 @@ function CyberSection({
     setLastStudyDate(today);
     setHoursLogged(h => h + 3);
     notify('🔥 Study session logged! +3 hours', 'var(--green)');
-  }
+  }, [lastStudyDate, today, studyStreak, setStudyStreak, setLastStudyDate, setHoursLogged, notify]);
 
-  function toggleSkill(skill: string) {
+  const toggleSkill = useCallback((skill: string) => {
     setCompletedSkills(prev =>
       prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
     );
-  }
+  }, [setCompletedSkills]);
 
-  function toggleCheckpoint(cp: string) {
+  const toggleCheckpoint = useCallback((cp: string) => {
     setCompletedCheckpoints(prev =>
       prev.includes(cp) ? prev.filter(c => c !== cp) : [...prev, cp]
     );
-  }
+  }, [setCompletedCheckpoints]);
 
   const skillsProgress = Math.round(
     (completedSkills.filter(s => roadmap.skills.includes(s)).length / roadmap.skills.length) * 100
@@ -2648,7 +2682,7 @@ function CyberSection({
       )}
     </div>
   );
-}
+});
 
 // ── MAIN APP ──────────────────────────────────────────────────────
 
@@ -2761,18 +2795,27 @@ export default function Dashboard() {
   const displayYear = now ? now.getFullYear() : '';
 
   // Gamification calculations
-  const dailyScore = calculateDailyPoints(
+  const dailyDate = useMemo(() => {
+    if (!now) return null;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, [currentTodayStr]);
+
+  const dailyScore = useMemo(() => calculateDailyPoints(
     completedToday,
     habitsWithProgress.filter((h: any) => h.todayDone).length,
     habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  ), [completedToday, habitsWithProgress]);
 
-  const weekDates = getWeekDates(now);
+  const bestStreak = useMemo(() => habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0, [habitsWithProgress]);
 
-  const NAV_ITEMS = [
+  const weeklyStats = useMemo(() => ({ completed: completedToday, total: totalToday || 1 }), [completedToday, totalToday]);
+
+  const weeklyScore = useMemo(() => weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50),
+    [weeklyStats, bestStreak, habitsWithProgress]);
+
+  const weekDates = useMemo(() => getWeekDates(dailyDate), [dailyDate]);
+
+  const NAV_ITEMS = useMemo(() => [
     { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
     { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
     { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
@@ -2782,7 +2825,7 @@ export default function Dashboard() {
     { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
     { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
     { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
-  ];
+  ], []);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2979,7 +3022,7 @@ export default function Dashboard() {
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={app.setTasksRaw} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
-        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
+        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} dailyDate={dailyDate} />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'cyber' && (

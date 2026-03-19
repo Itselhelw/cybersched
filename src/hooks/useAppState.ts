@@ -106,6 +106,9 @@ export function useAppState(now: Date | null) {
     const [unlockedBadges, setUnlockedBadges] = useLocalStorage<string[]>('cs-badges', []);
     const [notifications, setNotifications] = useState<{ id: string; message: string; color: string }[]>([]);
 
+    // Derived today string must be defined early to be used as a stable dependency for actions
+    const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
+
     // ── NOTIFICATION SYSTEM ──────────────────────────────────────
     const notify = useCallback((message: string, color = 'var(--cyan)') => {
         const id = Date.now().toString();
@@ -192,27 +195,33 @@ export function useAppState(now: Date | null) {
         categories.forEach(cat => syncTaskToHabit(cat));
     }, [tasks, dailyTimestamp, syncTaskToHabit]);
 
+    /**
+     * addTask is stabilized with currentTodayStr to prevent it from being recreated
+     * on every dashboard clock tick, preserving React.memo effectiveness in child components.
+     */
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
             ...taskData,
             id: Date.now().toString(),
             done: false,
-            date: todayStr(now) || new Date().toISOString().split('T')[0],
+            date: currentTodayStr || new Date().toISOString().split('T')[0],
         };
         setTasksRaw(prev => [...prev, newTask].sort((a, b) => a.time.localeCompare(b.time)));
         logEvent('TASK_ADD', { name: taskData.name, category: taskData.category }, 'user');
         notify(`+ Task added to ${taskData.category}`, 'var(--cyan)');
         return newTask;
-    }, [now, setTasksRaw, logEvent, notify]);
+    }, [currentTodayStr, setTasksRaw, logEvent, notify]);
 
     const deleteTask = useCallback((taskId: string) => {
         setTasksRaw(prev => prev.filter(t => t.id !== taskId));
         logEvent('TASK_DELETE', { taskId }, 'user');
     }, [setTasksRaw, logEvent]);
 
+    /**
+     * toggleHabit uses currentTodayStr to maintain reference stability across clock ticks.
+     */
     const toggleHabit = useCallback((habitId: string) => {
-        const currentToday = todayStr(now);
-        if (!currentToday) return;
+        if (!currentTodayStr) return;
 
         setHabitsRaw(prev => prev.map(h => {
             if (h.id !== habitId) return h;
@@ -227,22 +236,25 @@ export function useAppState(now: Date | null) {
                 streak: newStreak,
                 bestStreak,
                 totalDays: nowDone ? h.totalDays + 1 : h.totalDays,
-                lastDone: nowDone ? currentToday : h.lastDone,
+                lastDone: nowDone ? currentTodayStr : h.lastDone,
             };
         }));
-    }, [now, setHabitsRaw, logEvent, notify]);
+    }, [currentTodayStr, setHabitsRaw, logEvent, notify]);
 
     // ── QUIT DATE ─────────────────────────────────────────────────
+    /**
+     * setQuitDate is stabilized to ensure consistent prop references for Dashboard sections.
+     */
     const setQuitDate = useCallback((date: string) => {
         setQuitDateRaw(date);
         if (date) {
             setHabitsRaw(prev => prev.map(h =>
-                h.id === 'quit' ? { ...h, todayDone: true, lastDone: todayStr(now) } : h
+                h.id === 'quit' ? { ...h, todayDone: true, lastDone: currentTodayStr } : h
             ));
             logEvent('QUIT_DATE_SET', { date }, 'user');
             notify('🚭 Quit date set — No Smoke habit activated!', '#ff3366');
         }
-    }, [now, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
+    }, [currentTodayStr, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
 
     // ── SMOKE STATS ───────────────────────────────────────────────
     // Memoize smoke stats by minute to prevent unnecessary re-renders every second
@@ -263,9 +275,6 @@ export function useAppState(now: Date | null) {
     }, [quitDate, now ? Math.floor(now.getTime() / 60000) : null, settings.cigarettesPerDay, settings.costPerPack, settings.cigarettesPerPack]);
 
     // ── COMPUTED STATS ────────────────────────────────────────────
-    // Memoize current today string by date
-    const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
-
     const todayTasks = useMemo(() =>
         tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')),
         [tasks, currentTodayStr]
