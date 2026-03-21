@@ -5,3 +5,7 @@
 ## 2026-02-23 - Set-based Lookup for Habit Progress
 **Learning:** Iterating over tasks with `.some()` inside a loop (like habit categories or week dates) leads to O(N*M) complexity. Pre-calculating a `Set` of completed task identifiers (`category:date`) allows for O(1) lookups, significantly improving performance when the task list grows.
 **Action:** Pre-process task arrays into `Set` or `Map` data structures before performing repeated lookups in loops.
+
+## 2026-03-21 - Component-Level Memoization with High-Frequency Clocks
+**Learning:** In dashboards with a per-second clock, wrapping major UI sections and expensive charts in `React.memo` is critical to prevent redundant re-renders of stable data. Standalone components (like AI summaries or gamification panels) should also be memoized to isolate them from the global clock.
+**Action:** Wrap dashboard sections and Recharts components in `memo()` and ensure their props are stabilized using `useMemo` or `useCallback` in the parent component.

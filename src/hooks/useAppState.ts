@@ -192,18 +192,22 @@ export function useAppState(now: Date | null) {
         categories.forEach(cat => syncTaskToHabit(cat));
     }, [tasks, dailyTimestamp, syncTaskToHabit]);
 
+    // ── COMPUTED STATS ────────────────────────────────────────────
+    // Memoize current today string by date
+    const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
+
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
             ...taskData,
             id: Date.now().toString(),
             done: false,
-            date: todayStr(now) || new Date().toISOString().split('T')[0],
+            date: currentTodayStr || new Date().toISOString().split('T')[0],
         };
         setTasksRaw(prev => [...prev, newTask].sort((a, b) => a.time.localeCompare(b.time)));
         logEvent('TASK_ADD', { name: taskData.name, category: taskData.category }, 'user');
         notify(`+ Task added to ${taskData.category}`, 'var(--cyan)');
         return newTask;
-    }, [now, setTasksRaw, logEvent, notify]);
+    }, [currentTodayStr, setTasksRaw, logEvent, notify]);
 
     const deleteTask = useCallback((taskId: string) => {
         setTasksRaw(prev => prev.filter(t => t.id !== taskId));
@@ -211,8 +215,7 @@ export function useAppState(now: Date | null) {
     }, [setTasksRaw, logEvent]);
 
     const toggleHabit = useCallback((habitId: string) => {
-        const currentToday = todayStr(now);
-        if (!currentToday) return;
+        if (!currentTodayStr) return;
 
         setHabitsRaw(prev => prev.map(h => {
             if (h.id !== habitId) return h;
@@ -227,22 +230,22 @@ export function useAppState(now: Date | null) {
                 streak: newStreak,
                 bestStreak,
                 totalDays: nowDone ? h.totalDays + 1 : h.totalDays,
-                lastDone: nowDone ? currentToday : h.lastDone,
+                lastDone: nowDone ? currentTodayStr : h.lastDone,
             };
         }));
-    }, [now, setHabitsRaw, logEvent, notify]);
+    }, [currentTodayStr, setHabitsRaw, logEvent, notify]);
 
     // ── QUIT DATE ─────────────────────────────────────────────────
     const setQuitDate = useCallback((date: string) => {
         setQuitDateRaw(date);
         if (date) {
             setHabitsRaw(prev => prev.map(h =>
-                h.id === 'quit' ? { ...h, todayDone: true, lastDone: todayStr(now) } : h
+                h.id === 'quit' ? { ...h, todayDone: true, lastDone: currentTodayStr } : h
             ));
             logEvent('QUIT_DATE_SET', { date }, 'user');
             notify('🚭 Quit date set — No Smoke habit activated!', '#ff3366');
         }
-    }, [now, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
+    }, [currentTodayStr, setQuitDateRaw, setHabitsRaw, logEvent, notify]);
 
     // ── SMOKE STATS ───────────────────────────────────────────────
     // Memoize smoke stats by minute to prevent unnecessary re-renders every second
@@ -261,10 +264,6 @@ export function useAppState(now: Date | null) {
         const percent = Math.min((days / 90) * 100, 100);
         return { days, hours, minutes, cigarettes, moneySaved, percent };
     }, [quitDate, now ? Math.floor(now.getTime() / 60000) : null, settings.cigarettesPerDay, settings.costPerPack, settings.cigarettesPerPack]);
-
-    // ── COMPUTED STATS ────────────────────────────────────────────
-    // Memoize current today string by date
-    const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
 
     const todayTasks = useMemo(() =>
         tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')),

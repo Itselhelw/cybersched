@@ -1,8 +1,13 @@
 'use client';
 
+import React, { memo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
+/**
+ * WeeklyProgressChart: Displays a bar chart of completed vs total tasks per day.
+ * Wrapped in memo() to prevent expensive re-renders on every clock tick in the dashboard.
+ */
+export const WeeklyProgressChart = memo(function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -21,9 +26,13 @@ export function WeeklyProgressChart({ data }: { data: Array<{ day: string; compl
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
+/**
+ * CategoryBreakdownChart: Displays a bar chart of task completion by category.
+ * Wrapped in memo() to prevent expensive re-renders on every clock tick.
+ */
+export const CategoryBreakdownChart = memo(function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -42,16 +51,20 @@ export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; c
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+/**
+ * StreakRanking: Lists habits ranked by their current streak.
+ * Wrapped in memo() as it only needs to update when habit data changes.
+ */
+export const StreakRanking = memo(function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
         <div className="card-title">// Streak Ranking</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data
+        {[...data]
           .sort((a, b) => b.streak - a.streak)
           .map((item, idx) => (
             <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,245,255,0.05)', borderRadius: 8, borderLeft: `4px solid ${item.color}` }}>
@@ -65,9 +78,13 @@ export function StreakRanking({ data }: { data: Array<{ name: string; streak: nu
       </div>
     </div>
   );
-}
+});
 
-export function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
+/**
+ * CompletionDonut: Displays a donut chart of overall task completion percentage.
+ * Wrapped in memo() for performance stability.
+ */
+export const CompletionDonut = memo(function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
   const data = [
     { name: 'Completed', value: stats.completed, color: '#00ff88' },
     { name: 'Pending', value: stats.pending, color: '#6b6b8a' },
@@ -97,4 +114,4 @@ export function CompletionDonut({ stats }: { stats: { total: number; completed: 
       </div>
     </div>
   );
-}
+});
