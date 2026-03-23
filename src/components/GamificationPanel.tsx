@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ACHIEVEMENTS, BADGES, calculateDailyPoints, getProgressToNextMilestone, getRewardsForMilestone, type Achievement, type Badge } from '@/utils/gamificationUtils';
+import React, { useState } from 'react';
+import { ACHIEVEMENTS, BADGES, getProgressToNextMilestone, getRewardsForMilestone, type Achievement, type Badge } from '@/utils/gamificationUtils';
 
 interface GamificationPanelProps {
   tasksCompleted: number;
@@ -13,7 +13,7 @@ interface GamificationPanelProps {
   unlockedBadges: Badge[];
 }
 
-export default function GamificationPanel({
+const GamificationPanel = React.memo(function GamificationPanel({
   tasksCompleted,
   habitsCompleted,
   dailyScore,
@@ -25,7 +25,6 @@ export default function GamificationPanel({
   const [activeTab, setActiveTab] = useState<'overview' | 'achievements' | 'badges' | 'milestones'>('overview');
 
   const milestone = getProgressToNextMilestone(currentStreak);
-  const rewards = getRewardsForMilestone(currentStreak);
 
   const totalLevel = Math.floor(weeklyScore / 500) + 1;
   const levelProgress = (weeklyScore % 500) / 500;
@@ -171,4 +170,6 @@ export default function GamificationPanel({
       )}
     </div>
   );
-}
+});
+
+export default GamificationPanel;

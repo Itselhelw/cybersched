@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 interface Task {
@@ -13,7 +13,7 @@ interface HabitStat {
   [key: string]: any;
 }
 
-export default function AISummaryCard({ tasks, habits, smokeDays }: {
+const AISummaryCard = React.memo(function AISummaryCard({ tasks, habits, smokeDays }: {
   tasks: Task[]; habits: HabitStat[]; smokeDays: number;
 }) {
   const [summary, setSummary] = useLocalStorage<string>('cybersched-weekly-summary', '');
@@ -26,7 +26,7 @@ export default function AISummaryCard({ tasks, habits, smokeDays }: {
     ? Math.round((tasks.filter(t => t.done).length / tasks.length) * 100)
     : 0;
 
-  const bestStreak = Math.max(...habits.map(h => h.streak));
+  const bestStreak = habits.length > 0 ? Math.max(...habits.map(h => h.streak)) : 0;
 
   async function generateSummary() {
     if (loading) return;
@@ -120,4 +120,6 @@ export default function AISummaryCard({ tasks, habits, smokeDays }: {
       )}
     </div>
   );
-}
+});
+
+export default AISummaryCard;
