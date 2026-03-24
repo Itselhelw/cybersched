@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { ACHIEVEMENTS, BADGES, calculateDailyPoints, getProgressToNextMilestone, getRewardsForMilestone, type Achievement, type Badge } from '@/utils/gamificationUtils';
 
 interface GamificationPanelProps {
@@ -13,7 +13,7 @@ interface GamificationPanelProps {
   unlockedBadges: Badge[];
 }
 
-export default function GamificationPanel({
+export const GamificationPanel = memo(function GamificationPanel({
   tasksCompleted,
   habitsCompleted,
   dailyScore,
@@ -171,4 +171,6 @@ export default function GamificationPanel({
       )}
     </div>
   );
-}
+});
+
+export default GamificationPanel;
