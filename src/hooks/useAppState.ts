@@ -121,14 +121,14 @@ export function useAppState(now: Date | null) {
 
     // ── HABIT SYNC ────────────────────────────────────────────────
     // Memoize the daily timestamp to stabilize callbacks and effects
-    const dailyTimestamp = now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0;
+    const dailyDate = useMemo(() => now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0, [now?.getFullYear(), now?.getMonth(), now?.getDate()]);
 
     const syncTaskToHabit = useCallback((category: Category) => {
-        if (!dailyTimestamp) return;
-        const currentToday = todayStr(new Date(dailyTimestamp));
+        if (!dailyDate) return;
+        const currentToday = todayStr(new Date(dailyDate));
 
         const weekDates = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(dailyTimestamp);
+            const d = new Date(dailyDate);
             d.setDate(d.getDate() - d.getDay() + i);
             return d.toISOString().split('T')[0];
         });
@@ -163,7 +163,7 @@ export function useAppState(now: Date | null) {
                 lastDone: todayDone ? currentToday : h.lastDone,
             };
         }));
-    }, [dailyTimestamp, tasks, setHabitsRaw]);
+    }, [dailyDate, tasks, setHabitsRaw]);
 
     // ── TASK ACTIONS ──────────────────────────────────────────────
     const completeTask = useCallback((taskId: string) => {
@@ -187,10 +187,10 @@ export function useAppState(now: Date | null) {
 
     // Sync effect when tasks change - only sync when tasks or day changes
     useEffect(() => {
-        if (!dailyTimestamp) return;
+        if (!dailyDate) return;
         const categories: Category[] = ['body', 'mind', 'work', 'quit', 'fun'];
         categories.forEach(cat => syncTaskToHabit(cat));
-    }, [tasks, dailyTimestamp, syncTaskToHabit]);
+    }, [tasks, dailyDate, syncTaskToHabit]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
@@ -300,14 +300,14 @@ export function useAppState(now: Date | null) {
     // ── ACHIEVEMENT SYSTEM ────────────────────────────────────────
     // Only run when meaningful state changes (tasks, habits, or day changes), not every second
     useEffect(() => {
-        if (!dailyTimestamp) return;
+        if (!dailyDate) return;
         const newAchievements = checkAchievements(tasks, habits, smokeStats, unlockedAchievements);
         if (newAchievements.length > unlockedAchievements.length) {
             setUnlockedAchievements(newAchievements);
             const latest = newAchievements[newAchievements.length - 1];
             notify(`🏆 Achievement Unlocked: ${latest.name}`, 'var(--orange)');
         }
-    }, [tasks, habits, smokeStats.days, unlockedAchievements, setUnlockedAchievements, notify, dailyTimestamp]);
+    }, [tasks, habits, smokeStats.days, unlockedAchievements, setUnlockedAchievements, notify, dailyDate]);
 
     // ── STABILIZE APP OBJECT ──────────────────────────────────────
     return useMemo(() => ({
@@ -317,7 +317,7 @@ export function useAppState(now: Date | null) {
         unlockedAchievements, unlockedBadges,
         // Computed
         todayTasks, completedToday, totalToday, completionPct, currentTodayStr,
-        habitsWithProgress,
+        habitsWithProgress, dailyDate,
         // Actions
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
@@ -329,7 +329,7 @@ export function useAppState(now: Date | null) {
         onboarded, eventLog, notifications,
         unlockedAchievements, unlockedBadges,
         todayTasks, completedToday, totalToday, completionPct, currentTodayStr,
-        habitsWithProgress,
+        habitsWithProgress, dailyDate,
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
         toggleHabit, syncTaskToHabit,

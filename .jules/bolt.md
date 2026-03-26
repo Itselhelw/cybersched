@@ -5,3 +5,7 @@
 ## 2026-02-23 - Set-based Lookup for Habit Progress
 **Learning:** Iterating over tasks with `.some()` inside a loop (like habit categories or week dates) leads to O(N*M) complexity. Pre-calculating a `Set` of completed task identifiers (`category:date`) allows for O(1) lookups, significantly improving performance when the task list grows.
 **Action:** Pre-process task arrays into `Set` or `Map` data structures before performing repeated lookups in loops.
+
+## 2026-03-26 - Eliminating Redundant Component-Level Timers
+**Learning:** Components that only need to react to daily changes (like the AI Planner) should not maintain their own per-second timers. In a dashboard with a global clock, passing a memoized daily timestamp (e.g., from `useAppState`) as a prop is significantly more efficient than each component running its own `setInterval`.
+**Action:** Identify sub-components with internal timers that can be replaced by stable props from a central state manager.

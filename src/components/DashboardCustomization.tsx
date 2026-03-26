@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, memo } from 'react';
 
 interface DashboardCustomization {
   theme: 'dark' | 'light' | 'cyan' | 'green';
@@ -17,7 +17,7 @@ interface DashboardCustomizationPanelProps {
   onSettingsChange: (settings: DashboardCustomization) => void;
 }
 
-export default function DashboardCustomizationPanel({
+const DashboardCustomizationPanel = memo(function DashboardCustomizationPanel({
   settings,
   onSettingsChange,
 }: DashboardCustomizationPanelProps) {
@@ -259,4 +259,6 @@ export default function DashboardCustomizationPanel({
       )}
     </>
   );
-}
+});
+
+export default DashboardCustomizationPanel;
