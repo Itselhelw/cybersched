@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { HABIT_TEMPLATES, createCustomHabit, createHabitFromTemplate, addJournalEntry, getHabitJournalEntries, getHabitInsights } from '@/utils/habitUtils';
 
 interface HabitManagementPanelProps {
@@ -10,7 +10,7 @@ interface HabitManagementPanelProps {
   onUpdateHabit: (habitId: string, updates: any) => void;
 }
 
-export default function HabitManagementPanel({
+const HabitManagementPanel = memo(function HabitManagementPanel({
   habits,
   onAddHabit,
   onDeleteHabit,
@@ -358,4 +358,6 @@ export default function HabitManagementPanel({
       )}
     </div>
   );
-}
+});
+
+export default HabitManagementPanel;

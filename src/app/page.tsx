@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -645,6 +645,18 @@ const RESOURCE_ICONS: Record<string, string> = {
   app: '📱',
 };
 
+const NAV_ITEMS = [
+  { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
+  { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
+  { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
+  { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
+  { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
+  { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
+  { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
+  { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
+  { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
+];
+
 const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }[]> = {
   0: [{ label: 'Rest', color: '#6b6b8a', bg: 'rgba(107,107,138,0.15)' }],
   1: [{ label: 'Gym', color: '#00ff88', bg: 'rgba(0,255,136,0.12)' }, { label: 'Study', color: '#00f5ff', bg: 'rgba(0,245,255,0.12)' }, { label: 'Work', color: '#ff8c00', bg: 'rgba(255,140,0,0.12)' }],
@@ -732,7 +744,10 @@ function NotificationToast({ notifications }: {
 }
 
 // ── TASKS SECTION ─────────────────────────────────────────────────
-function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
+/**
+ * TasksSection: Memoized to prevent re-renders on every clock tick.
+ */
+const TasksSection = memo(function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<Category | 'all'>('all');
   const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
@@ -859,10 +874,13 @@ function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; set
       )}
     </div>
   );
-}
+});
 
 // ── HABITS SECTION ────────────────────────────────────────────────
-function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
+/**
+ * HabitsSection: Memoized dashboard section.
+ */
+const HabitsSection = memo(function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
   function toggle(id: string) {
     toggleHabit(id);
   }
@@ -939,10 +957,13 @@ function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; se
       </div>
     </div>
   );
-}
+});
 
 // ── QUIT COUNTER CARD ─────────────────────────────────────────────
-function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
+/**
+ * QuitCounterCard: Memoized to prevent per-second updates unless smokeStats (memoized by minute) changes.
+ */
+const QuitCounterCard = memo(function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
   quitDate: string;
   setQuitDate: (d: string) => void;
   smokeStats: SmokeStats;
@@ -1081,10 +1102,13 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
       )}
     </div>
   );
-}
+});
 
 // ── STATS SECTION ─────────────────────────────────────────────────
-function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
+/**
+ * StatsSection: Memoized dashboard section.
+ */
+const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
   const completed = tasks.filter(t => t.done).length;
   const total = tasks.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -1154,10 +1178,13 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
       </div>
     </div>
   );
-}
+});
 
 // ── ANALYTICS SECTION ──────────────────────────────────────────────
-function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
+/**
+ * AnalyticsSection: Memoized dashboard section.
+ */
+const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
   const weeklyData = getWeeklyProgressData(tasks);
@@ -1265,22 +1292,20 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
       <StreakRanking data={streakData} />
     </div>
   );
-}
+});
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+/**
+ * PlannerSection: Memoized dashboard section.
+ */
+const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule, dailyDate }: {
   addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
   notify: (msg: string, color?: string) => void;
   aiSchedule: any;
   setAiSchedule: (s: any) => void;
+  dailyDate: Date | null;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
-  const weekDates = getWeekDates(now);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const weekDates = getWeekDates(dailyDate);
   const [loading, setLoading] = useState(false);
   const [germanMonth] = useLocalStorage<number>('german-month', 1);
   const [error, setError] = useState('');
@@ -1399,7 +1424,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
               <div key={i} className="day-col">
                 <div className="day-header">
                   <div className="day-name">{DAYS[date.getDay()]}</div>
-                  <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
+                  <div className={`day-num ${dailyDate && date.getDay() === dailyDate.getDay() && date.getDate() === dailyDate.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
                 </div>
                 {(WEEK_SCHEDULE[i] || []).map((block, j) => (
                   <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
@@ -1474,7 +1499,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
       )}
     </div>
   );
-}
+});
 
 // ── GERMAN TRANSLATIONS ──────────────────────────────────────────
 const GRAMMAR_ARABIC: Record<string, string> = {
@@ -1513,7 +1538,10 @@ const DAILY_TASKS_ARABIC: Record<string, string> = {
 };
 
 // ── GERMAN SECTION ────────────────────────────────────────────────
-function GermanSection({
+/**
+ * GermanSection: Memoized dashboard section.
+ */
+const GermanSection = memo(function GermanSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -1843,10 +1871,13 @@ function GermanSection({
       )}
     </div>
   );
-}
+});
 
 // ── SETTINGS SECTION ──────────────────────────────────────────────
-function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
+/**
+ * SettingsSection: Memoized dashboard section.
+ */
+const SettingsSection = memo(function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
   const [edited, setEdited] = useState(false);
   const [form, setForm] = useState(settings);
 
@@ -1922,10 +1953,13 @@ function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHa
       </div>
     </div>
   );
-}
+});
 
 // ── AI MOTIVATION CARD ────────────────────────────────────────────
-function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goals }: {
+/**
+ * AIMotivationCard: Memoized dashboard card.
+ */
+const AIMotivationCard = memo(function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goals }: {
   settings: Settings;
   smokeStats: SmokeStats;
   gymStreak: number;
@@ -1974,7 +2008,7 @@ function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goal
       </div>
     </div>
   );
-}
+});
 
 // ── POMODORO TIMER ────────────────────────────────────────────────
 const POMODORO_MODES = {
@@ -1983,7 +2017,10 @@ const POMODORO_MODES = {
   longBreak: { label: 'LONG BREAK', time: 15 * 60, color: 'var(--green)' },
 } as const;
 
-function PomodoroTimer() {
+/**
+ * PomodoroTimer: Memoized component.
+ */
+const PomodoroTimer = memo(function PomodoroTimer() {
   const [count, setCount] = useLocalStorage<number>('cybersched-pomodoros', 0);
   const [mode, setMode] = useState<'work' | 'shortBreak' | 'longBreak'>('work');
   const [time, setTime] = useState(25 * 60);
@@ -2056,7 +2093,7 @@ function PomodoroTimer() {
       </div>
     </div>
   );
-}
+});
 
 // ── AI CHAT CONTROLLER ────────────────────────────────────────────
 interface ChatMessage {
@@ -2065,7 +2102,10 @@ interface ChatMessage {
   timestamp: string;
 }
 
-function AIChatController({
+/**
+ * AIChatController: Memoized AI interaction component.
+ */
+const AIChatController = memo(function AIChatController({
   tasks, setTasks, habits, setHabits, settings, setSettings,
   quitDate, setQuitDate, setActiveNav, currentTodayStr, notify,
   addTask,
@@ -2334,10 +2374,13 @@ function AIChatController({
       </button>
     </div>
   );
-}
+});
 
 
-function CyberSection({
+/**
+ * CyberSection: Memoized dashboard section.
+ */
+const CyberSection = memo(function CyberSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -2648,7 +2691,7 @@ function CyberSection({
       )}
     </div>
   );
-}
+});
 
 // ── MAIN APP ──────────────────────────────────────────────────────
 
@@ -2760,29 +2803,24 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
-  // Gamification calculations
-  const dailyScore = calculateDailyPoints(
+  // Derived stable date for memoized children (only updates once per day)
+  const dailyDate = useMemo(() => now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : null, [now ? todayStr(now) : '']);
+
+  // Gamification calculations - Memoized to prevent redundant calculations on every clock tick
+  const dailyScore = useMemo(() => calculateDailyPoints(
     completedToday,
     habitsWithProgress.filter((h: any) => h.todayDone).length,
     habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  ), [completedToday, habitsWithProgress]);
 
-  const weekDates = getWeekDates(now);
+  const bestStreak = useMemo(() => habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0, [habitsWithProgress]);
 
-  const NAV_ITEMS = [
-    { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
-    { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
-    { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
-    { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
-    { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
-    { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
-    { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
-    { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
-    { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
-  ];
+  const weeklyScore = useMemo(() => {
+    const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+    return weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  }, [completedToday, totalToday, bestStreak, habitsWithProgress]);
+
+  const weekDates = useMemo(() => getWeekDates(dailyDate), [dailyDate]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2979,7 +3017,7 @@ export default function Dashboard() {
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={app.setTasksRaw} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
-        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
+        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} dailyDate={dailyDate} />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'cyber' && (
