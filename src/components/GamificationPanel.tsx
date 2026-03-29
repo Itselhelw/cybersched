@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { ACHIEVEMENTS, BADGES, calculateDailyPoints, getProgressToNextMilestone, getRewardsForMilestone, type Achievement, type Badge } from '@/utils/gamificationUtils';
 
 interface GamificationPanelProps {
@@ -13,7 +13,11 @@ interface GamificationPanelProps {
   unlockedBadges: Badge[];
 }
 
-export default function GamificationPanel({
+/**
+ * GamificationPanel: Memoized to prevent re-renders on clock ticks.
+ * Only re-renders when scores, streaks, or achievements are updated.
+ */
+const GamificationPanel = memo(function GamificationPanel({
   tasksCompleted,
   habitsCompleted,
   dailyScore,
@@ -171,4 +175,6 @@ export default function GamificationPanel({
       )}
     </div>
   );
-}
+});
+
+export default GamificationPanel;

@@ -1,8 +1,13 @@
 'use client';
 
+import { memo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
+/**
+ * WeeklyProgressChart: Memoized to prevent re-renders on every clock tick.
+ * Only re-renders when task completion data changes.
+ */
+export const WeeklyProgressChart = memo(function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -21,9 +26,13 @@ export function WeeklyProgressChart({ data }: { data: Array<{ day: string; compl
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
+/**
+ * CategoryBreakdownChart: Memoized to prevent re-renders on clock ticks.
+ * Only re-renders when category-specific task data changes.
+ */
+export const CategoryBreakdownChart = memo(function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -42,16 +51,20 @@ export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; c
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+/**
+ * StreakRanking: Memoized to prevent re-renders on clock ticks.
+ * Fixes O(N log N) sort operation in render path by cloning the array before sorting.
+ */
+export const StreakRanking = memo(function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
         <div className="card-title">// Streak Ranking</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data
+        {[...data]
           .sort((a, b) => b.streak - a.streak)
           .map((item, idx) => (
             <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,245,255,0.05)', borderRadius: 8, borderLeft: `4px solid ${item.color}` }}>
@@ -65,9 +78,13 @@ export function StreakRanking({ data }: { data: Array<{ name: string; streak: nu
       </div>
     </div>
   );
-}
+});
 
-export function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
+/**
+ * CompletionDonut: Memoized to prevent re-renders on clock ticks.
+ * Only re-renders when overall task statistics change.
+ */
+export const CompletionDonut = memo(function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
   const data = [
     { name: 'Completed', value: stats.completed, color: '#00ff88' },
     { name: 'Pending', value: stats.pending, color: '#6b6b8a' },
@@ -97,4 +114,4 @@ export function CompletionDonut({ stats }: { stats: { total: number; completed: 
       </div>
     </div>
   );
-}
+});
