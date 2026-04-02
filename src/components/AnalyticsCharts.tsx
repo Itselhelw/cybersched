@@ -1,8 +1,13 @@
 'use client';
 
+import React, { memo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
+/**
+ * Memoized WeeklyProgressChart to prevent redundant re-renders from the dashboard's per-second clock.
+ * Expected Impact: Reduces re-renders by ~60/min when data is stable.
+ */
+export const WeeklyProgressChart = memo(function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -21,9 +26,13 @@ export function WeeklyProgressChart({ data }: { data: Array<{ day: string; compl
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
+/**
+ * Memoized CategoryBreakdownChart to prevent redundant re-renders from the dashboard's per-second clock.
+ * Expected Impact: Reduces re-renders by ~60/min when data is stable.
+ */
+export const CategoryBreakdownChart = memo(function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -42,18 +51,23 @@ export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; c
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+/**
+ * Memoized StreakRanking to prevent redundant re-renders from the dashboard's per-second clock.
+ * Expected Impact: Reduces re-renders by ~60/min when data is stable.
+ */
+export const StreakRanking = memo(function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+  // Clone data before sorting to avoid mutating props, which could break memoization
+  const sortedData = [...data].sort((a, b) => b.streak - a.streak);
+
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
         <div className="card-title">// Streak Ranking</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data
-          .sort((a, b) => b.streak - a.streak)
-          .map((item, idx) => (
+        {sortedData.map((item, idx) => (
             <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,245,255,0.05)', borderRadius: 8, borderLeft: `4px solid ${item.color}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 18, fontWeight: 700, color: '#00f5ff', minWidth: 30 }}>#{idx + 1}</span>
@@ -65,9 +79,13 @@ export function StreakRanking({ data }: { data: Array<{ name: string; streak: nu
       </div>
     </div>
   );
-}
+});
 
-export function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
+/**
+ * Memoized CompletionDonut to prevent redundant re-renders from the dashboard's per-second clock.
+ * Expected Impact: Reduces re-renders by ~60/min when data is stable.
+ */
+export const CompletionDonut = memo(function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
   const data = [
     { name: 'Completed', value: stats.completed, color: '#00ff88' },
     { name: 'Pending', value: stats.pending, color: '#6b6b8a' },
@@ -97,4 +115,4 @@ export function CompletionDonut({ stats }: { stats: { total: number; completed: 
       </div>
     </div>
   );
-}
+});
