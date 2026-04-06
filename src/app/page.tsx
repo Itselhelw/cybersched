@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -656,10 +656,11 @@ const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }
 };
 
 function todayStr(baseDate?: Date | null) {
-  if (baseDate) return baseDate.toISOString().split('T')[0];
-  // Fallback to current date (client-only) for contexts where no Date is passed
-  if (typeof window !== 'undefined') return new Date().toISOString().split('T')[0];
-  return '';
+  const d = baseDate || (typeof window !== 'undefined' ? new Date() : null);
+  if (!d) return '';
+  const offset = d.getTimezoneOffset();
+  const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+  return localDate.toISOString().split('T')[0];
 }
 
 function getWeekDates(baseDate?: Date | null): Date[] | null {
@@ -732,7 +733,7 @@ function NotificationToast({ notifications }: {
 }
 
 // ── TASKS SECTION ─────────────────────────────────────────────────
-function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
+const TasksSection = memo(function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; setTasks: React.Dispatch<React.SetStateAction<Task[]>>; currentTodayStr: string }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<Category | 'all'>('all');
   const [newTask, setNewTask] = useState({ name: '', category: 'body' as Category, time: '09:00' });
@@ -859,10 +860,10 @@ function TasksSection({ tasks, setTasks, currentTodayStr }: { tasks: Task[]; set
       )}
     </div>
   );
-}
+});
 
 // ── HABITS SECTION ────────────────────────────────────────────────
-function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
+const HabitsSection = memo(function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; toggleHabit: (id: string) => void }) {
   function toggle(id: string) {
     toggleHabit(id);
   }
@@ -939,7 +940,7 @@ function HabitsSection({ habits, setHabits, toggleHabit }: { habits: Habit[]; se
       </div>
     </div>
   );
-}
+});
 
 // ── QUIT COUNTER CARD ─────────────────────────────────────────────
 function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
@@ -1084,7 +1085,7 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
 }
 
 // ── STATS SECTION ─────────────────────────────────────────────────
-function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
+const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
   const completed = tasks.filter(t => t.done).length;
   const total = tasks.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -1154,16 +1155,16 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
       </div>
     </div>
   );
-}
+});
 
 // ── ANALYTICS SECTION ──────────────────────────────────────────────
-function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
+const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
-  const weeklyData = getWeeklyProgressData(tasks);
-  const categoryData = getCategoryBreakdown(tasks);
-  const streakData = getStreakHistory(habits);
-  const completionStats = getCompletionStats(tasks);
+  const weeklyData = useMemo(() => getWeeklyProgressData(tasks), [tasks]);
+  const categoryData = useMemo(() => getCategoryBreakdown(tasks), [tasks]);
+  const streakData = useMemo(() => getStreakHistory(habits), [habits]);
+  const completionStats = useMemo(() => getCompletionStats(tasks), [tasks]);
 
   async function handleExportPDF() {
     setLoading(true);
@@ -1265,22 +1266,17 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
       <StreakRanking data={streakData} />
     </div>
   );
-}
+});
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule, weekDates, currentTodayStr }: {
   addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
   notify: (msg: string, color?: string) => void;
   aiSchedule: any;
   setAiSchedule: (s: any) => void;
+  weekDates: Date[] | null;
+  currentTodayStr: string;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
-  const weekDates = getWeekDates(now);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
   const [loading, setLoading] = useState(false);
   const [germanMonth] = useLocalStorage<number>('german-month', 1);
   const [error, setError] = useState('');
@@ -1399,7 +1395,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
               <div key={i} className="day-col">
                 <div className="day-header">
                   <div className="day-name">{DAYS[date.getDay()]}</div>
-                  <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
+                  <div className={`day-num ${todayStr(date) === currentTodayStr ? 'today' : ''}`}>{date.getDate()}</div>
                 </div>
                 {(WEEK_SCHEDULE[i] || []).map((block, j) => (
                   <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
@@ -1474,7 +1470,7 @@ function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
       )}
     </div>
   );
-}
+});
 
 // ── GERMAN TRANSLATIONS ──────────────────────────────────────────
 const GRAMMAR_ARABIC: Record<string, string> = {
@@ -1513,7 +1509,7 @@ const DAILY_TASKS_ARABIC: Record<string, string> = {
 };
 
 // ── GERMAN SECTION ────────────────────────────────────────────────
-function GermanSection({
+const GermanSection = memo(function GermanSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -1843,10 +1839,10 @@ function GermanSection({
       )}
     </div>
   );
-}
+});
 
 // ── SETTINGS SECTION ──────────────────────────────────────────────
-function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
+const SettingsSection = memo(function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHabits, quitDate, setQuitDate, userId, notify }: { settings: Settings; setSettings: (s: Settings) => void; tasks: Task[]; setTasks: (t: Task[] | ((prev: Task[]) => Task[])) => void; habits: Habit[]; setHabits: (h: Habit[] | ((prev: Habit[]) => Habit[])) => void; quitDate: string; setQuitDate: (d: string) => void; userId: string; notify: (m: string, c?: string) => void }) {
   const [edited, setEdited] = useState(false);
   const [form, setForm] = useState(settings);
 
@@ -1922,7 +1918,7 @@ function SettingsSection({ settings, setSettings, tasks, setTasks, habits, setHa
       </div>
     </div>
   );
-}
+});
 
 // ── AI MOTIVATION CARD ────────────────────────────────────────────
 function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goals }: {
@@ -2065,7 +2061,7 @@ interface ChatMessage {
   timestamp: string;
 }
 
-function AIChatController({
+const AIChatController = memo(function AIChatController({
   tasks, setTasks, habits, setHabits, settings, setSettings,
   quitDate, setQuitDate, setActiveNav, currentTodayStr, notify,
   addTask,
@@ -2334,10 +2330,10 @@ function AIChatController({
       </button>
     </div>
   );
-}
+});
 
 
-function CyberSection({
+const CyberSection = memo(function CyberSection({
   tasks, addTask, notify,
 }: {
   tasks: Task[];
@@ -2648,9 +2644,21 @@ function CyberSection({
       )}
     </div>
   );
-}
+});
 
 // ── MAIN APP ──────────────────────────────────────────────────────
+
+const NAV_ITEMS = [
+  { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
+  { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
+  { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
+  { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
+  { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
+  { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
+  { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
+  { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
+  { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
+];
 
 export default function Dashboard() {
   const [now, setNow] = useState<Date | null>(null);
@@ -2754,6 +2762,8 @@ export default function Dashboard() {
     addTask, completeTask, toggleHabit, notify
   } = app;
 
+  const dailyDate = useMemo(() => now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0, [now?.getFullYear(), now?.getMonth(), now?.getDate()]);
+
   const displayTime = now ? now.toTimeString().slice(0, 8) : '--:--:--';
   const displayDay = now ? DAYS[now.getDay()] : '';
   const displayMonth = now ? MONTHS[now.getMonth()] : '';
@@ -2761,28 +2771,17 @@ export default function Dashboard() {
   const displayYear = now ? now.getFullYear() : '';
 
   // Gamification calculations
-  const dailyScore = calculateDailyPoints(
+  const dailyScore = useMemo(() => calculateDailyPoints(
     completedToday,
     habitsWithProgress.filter((h: any) => h.todayDone).length,
     habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  ), [completedToday, habitsWithProgress, dailyDate]);
 
-  const weekDates = getWeekDates(now);
+  const bestStreak = useMemo(() => habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0, [habitsWithProgress, dailyDate]);
+  const weeklyStats = useMemo(() => ({ completed: completedToday, total: totalToday || 1 }), [completedToday, totalToday, dailyDate]);
+  const weeklyScore = useMemo(() => weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50), [weeklyStats, bestStreak, habitsWithProgress, dailyDate]);
 
-  const NAV_ITEMS = [
-    { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
-    { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
-    { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
-    { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
-    { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
-    { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
-    { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
-    { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
-    { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
-  ];
+  const weekDates = useMemo(() => getWeekDates(now), [dailyDate]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2979,7 +2978,7 @@ export default function Dashboard() {
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={app.setTasksRaw} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
-        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
+        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} weekDates={weekDates} currentTodayStr={currentTodayStr} />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'cyber' && (

@@ -84,7 +84,11 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 function todayStr(baseDate?: Date | null) {
-    return baseDate ? baseDate.toISOString().split('T')[0] : '';
+    if (!baseDate) return '';
+    const d = baseDate;
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
 }
 
 function calcWeekProgress(category: Category, weekDates: string[], doneTaskMap: Set<string>): number {
@@ -130,7 +134,7 @@ export function useAppState(now: Date | null) {
         const weekDates = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(dailyTimestamp);
             d.setDate(d.getDate() - d.getDay() + i);
-            return d.toISOString().split('T')[0];
+            return todayStr(d);
         });
 
         const doneTaskMap = new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
@@ -285,7 +289,7 @@ export function useAppState(now: Date | null) {
         const weekDates = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(now);
             d.setDate(d.getDate() - d.getDay() + i);
-            return d.toISOString().split('T')[0];
+            return todayStr(d);
         });
 
         // O(N) pre-processing to make habit lookups O(1)
