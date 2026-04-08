@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -1160,10 +1160,12 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
 function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
-  const weeklyData = getWeeklyProgressData(tasks);
-  const categoryData = getCategoryBreakdown(tasks);
-  const streakData = getStreakHistory(habits);
-  const completionStats = getCompletionStats(tasks);
+  // Memoize analytics data to prevent expensive recalculations on every dashboard clock tick (1s)
+  // These only need to update when the underlying tasks or habits data changes
+  const weeklyData = useMemo(() => getWeeklyProgressData(tasks), [tasks]);
+  const categoryData = useMemo(() => getCategoryBreakdown(tasks), [tasks]);
+  const streakData = useMemo(() => getStreakHistory(habits), [habits]);
+  const completionStats = useMemo(() => getCompletionStats(tasks), [tasks]);
 
   async function handleExportPDF() {
     setLoading(true);
