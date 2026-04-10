@@ -51,9 +51,7 @@ export function StreakRanking({ data }: { data: Array<{ name: string; streak: nu
         <div className="card-title">// Streak Ranking</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data
-          .sort((a, b) => b.streak - a.streak)
-          .map((item, idx) => (
+        {data.map((item, idx) => (
             <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,245,255,0.05)', borderRadius: 8, borderLeft: `4px solid ${item.color}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 18, fontWeight: 700, color: '#00f5ff', minWidth: 30 }}>#{idx + 1}</span>
