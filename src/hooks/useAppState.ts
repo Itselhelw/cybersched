@@ -1,6 +1,6 @@
 import { useLocalStorage } from './useLocalStorage';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { checkAchievements, type Achievement } from '@/utils/gamificationUtils';
+import { checkAchievements, calculateDailyPoints, type Achievement } from '@/utils/gamificationUtils';
 
 export type Category = 'body' | 'mind' | 'work' | 'quit' | 'fun';
 export type NavSection = 'dashboard' | 'tasks' | 'habits' | 'stats' | 'planner' | 'german' | 'cyber' | 'settings' | 'analytics';
@@ -123,35 +123,44 @@ export function useAppState(now: Date | null) {
     // Memoize the daily timestamp to stabilize callbacks and effects
     const dailyTimestamp = now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0;
 
-    const syncTaskToHabit = useCallback((category: Category) => {
-        if (!dailyTimestamp) return;
-        const currentToday = todayStr(new Date(dailyTimestamp));
-
-        const weekDates = Array.from({ length: 7 }, (_, i) => {
+    // Memoize static markers to avoid O(N) recalculations on every render
+    const weekDates = useMemo(() => {
+        if (!dailyTimestamp) return [];
+        return Array.from({ length: 7 }, (_, i) => {
             const d = new Date(dailyTimestamp);
             d.setDate(d.getDate() - d.getDay() + i);
             return d.toISOString().split('T')[0];
         });
+    }, [dailyTimestamp]);
 
-        const doneTaskMap = new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
+    const doneTaskMap = useMemo(() =>
+        new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`)),
+        [tasks]
+    );
 
-        // Update habits based on current tasks
+    const syncTasksToHabits = useCallback(() => {
+        if (!dailyTimestamp || weekDates.length === 0) return;
+        const currentToday = todayStr(new Date(dailyTimestamp));
+
+        // Update habits based on current tasks - consolidated into single pass
         setHabitsRaw(prev => prev.map(h => {
-            if (h.id !== category) return h;
-
+            const category = h.id as Category;
             const weekProgress = calcWeekProgress(category, weekDates, doneTaskMap);
 
             const wasAlreadyDone = h.todayDone;
             const todayDone = doneTaskMap.has(`${category}:${currentToday}`);
 
-            // Streak logic: increment if newly done today, keep if already done, keep if not yet evaluated today
+            // Streak and total days logic - maintained with O(1) lookups
             let newStreak = h.streak;
             if (todayDone && !wasAlreadyDone) {
                 newStreak = h.streak + 1;
+            } else if (!todayDone && wasAlreadyDone) {
+                newStreak = Math.max(0, h.streak - 1);
             }
 
             const bestStreak = Math.max(newStreak, h.bestStreak);
-            const totalDays = todayDone && !wasAlreadyDone ? h.totalDays + 1 : h.totalDays;
+            const totalDays = todayDone && !wasAlreadyDone ? h.totalDays + 1 :
+                             (!todayDone && wasAlreadyDone ? Math.max(0, h.totalDays - 1) : h.totalDays);
 
             return {
                 ...h,
@@ -163,7 +172,7 @@ export function useAppState(now: Date | null) {
                 lastDone: todayDone ? currentToday : h.lastDone,
             };
         }));
-    }, [dailyTimestamp, tasks, setHabitsRaw]);
+    }, [dailyTimestamp, weekDates, doneTaskMap, setHabitsRaw]);
 
     // ── TASK ACTIONS ──────────────────────────────────────────────
     const completeTask = useCallback((taskId: string) => {
@@ -188,9 +197,8 @@ export function useAppState(now: Date | null) {
     // Sync effect when tasks change - only sync when tasks or day changes
     useEffect(() => {
         if (!dailyTimestamp) return;
-        const categories: Category[] = ['body', 'mind', 'work', 'quit', 'fun'];
-        categories.forEach(cat => syncTaskToHabit(cat));
-    }, [tasks, dailyTimestamp, syncTaskToHabit]);
+        syncTasksToHabits();
+    }, [tasks, dailyTimestamp, syncTasksToHabits]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
@@ -267,35 +275,48 @@ export function useAppState(now: Date | null) {
     const currentTodayStr = useMemo(() => todayStr(now), [now ? todayStr(now) : '']);
 
     const todayTasks = useMemo(() =>
-        tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')),
+        tasks
+            .filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''))
+            .sort((a, b) => a.time.localeCompare(b.time)),
         [tasks, currentTodayStr]
     );
 
-    const completedToday = useMemo(() => todayTasks.filter(t => t.done).length, [todayTasks]);
-    const totalToday = useMemo(() => todayTasks.length, [todayTasks]);
-    const completionPct = useMemo(() =>
-        totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0,
-        [completedToday, totalToday]
-    );
+    const { completedToday, totalToday, completionPct } = useMemo(() => {
+        const completed = todayTasks.filter(t => t.done).length;
+        const total = todayTasks.length;
+        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        return { completedToday: completed, totalToday: total, completionPct: pct };
+    }, [todayTasks]);
 
-    // Optimized habit progress calculation
+    // Optimized habit progress calculation using memoized markers
     const habitsWithProgress = useMemo(() => {
-        if (!now) return habits;
-
-        const weekDates = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(now);
-            d.setDate(d.getDate() - d.getDay() + i);
-            return d.toISOString().split('T')[0];
-        });
-
-        // O(N) pre-processing to make habit lookups O(1)
-        const doneTaskMap = new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
+        if (!now || weekDates.length === 0) return habits;
 
         return habits.map(h => ({
             ...h,
             weekProgress: calcWeekProgress(h.id as Category, weekDates, doneTaskMap),
         }));
-    }, [habits, tasks, now ? todayStr(now) : '', now ? now.getDay() : null]);
+    }, [habits, weekDates, doneTaskMap]);
+
+    // Dashboard metrics memoized to prevent recalculation on every clock tick
+    const dailyScore = useMemo(() =>
+        calculateDailyPoints(
+            completedToday,
+            habitsWithProgress.filter(h => h.todayDone).length,
+            habitsWithProgress.filter(h => h.streak > 0).length
+        ),
+        [completedToday, habitsWithProgress]
+    );
+
+    const bestStreak = useMemo(() =>
+        habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map(h => h.streak)) : 0,
+        [habitsWithProgress]
+    );
+
+    const weeklyScore = useMemo(() => {
+        const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+        return weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter(h => h.weekProgress > 50).length * 50);
+    }, [completedToday, totalToday, bestStreak, habitsWithProgress]);
 
     // ── ACHIEVEMENT SYSTEM ────────────────────────────────────────
     // Only run when meaningful state changes (tasks, habits, or day changes), not every second
@@ -317,11 +338,11 @@ export function useAppState(now: Date | null) {
         unlockedAchievements, unlockedBadges,
         // Computed
         todayTasks, completedToday, totalToday, completionPct, currentTodayStr,
-        habitsWithProgress,
+        habitsWithProgress, dailyScore, bestStreak, weeklyScore,
         // Actions
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
-        toggleHabit, syncTaskToHabit,
+        toggleHabit, syncTasksToHabits,
         setQuitDate, setSettings, setOnboarded,
         notify, logEvent,
     }), [
@@ -329,10 +350,10 @@ export function useAppState(now: Date | null) {
         onboarded, eventLog, notifications,
         unlockedAchievements, unlockedBadges,
         todayTasks, completedToday, totalToday, completionPct, currentTodayStr,
-        habitsWithProgress,
+        habitsWithProgress, dailyScore, bestStreak, weeklyScore,
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
-        toggleHabit, syncTaskToHabit,
+        toggleHabit, syncTasksToHabits,
         setQuitDate, setSettings, setOnboarded,
         notify, logEvent
     ]);
