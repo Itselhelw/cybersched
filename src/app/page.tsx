@@ -19,6 +19,18 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CATEGORY_LABELS: Record<Category, string> = { body: 'Body', mind: 'Mind', work: 'Work', quit: 'Quit', fun: 'Fun' };
 
+const NAV_ITEMS = [
+  { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
+  { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
+  { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
+  { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
+  { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
+  { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
+  { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
+  { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
+  { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
+];
+
 const GERMAN_ROADMAP = [
   {
     month: 1, phase: 'Foundation', level: 'A1',
@@ -2750,7 +2762,8 @@ export default function Dashboard() {
     tasks, habits, habitsWithProgress,
     settings, quitDate, smokeStats,
     unlockedAchievements, unlockedBadges,
-    currentTodayStr, completedToday, totalToday, completionPct,
+    currentTodayStr, todayTasks, completedToday, totalToday, completionPct,
+    dailyScore, bestStreak, weeklyScore,
     addTask, completeTask, toggleHabit, notify
   } = app;
 
@@ -2760,29 +2773,7 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
-  // Gamification calculations
-  const dailyScore = calculateDailyPoints(
-    completedToday,
-    habitsWithProgress.filter((h: any) => h.todayDone).length,
-    habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
-
   const weekDates = getWeekDates(now);
-
-  const NAV_ITEMS = [
-    { id: 'dashboard' as NavSection, icon: '⬡', label: 'Dashboard' },
-    { id: 'tasks' as NavSection, icon: '◈', label: 'Tasks' },
-    { id: 'habits' as NavSection, icon: '◎', label: 'Habits' },
-    { id: 'stats' as NavSection, icon: '◫', label: 'Statistics' },
-    { id: 'planner' as NavSection, icon: '▦', label: 'Planner' },
-    { id: 'analytics' as NavSection, icon: '📊', label: 'Analytics' },
-    { id: 'german' as NavSection, icon: '🇩🇪', label: 'German' },
-    { id: 'cyber' as NavSection, icon: '🔐', label: 'Cyber' },
-    { id: 'settings' as NavSection, icon: '⚙', label: 'Settings' },
-  ];
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2882,7 +2873,7 @@ export default function Dashboard() {
                     <div className="card-title">{"// Today's Mission"}</div>
                     <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
                   </div>
-                  {tasks.filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a: any, b: any) => a.time.localeCompare(b.time)).map((task: any) => (
+                  {todayTasks.map((task: any) => (
                     <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => completeTask(task.id)}>
                       <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
                       <div className="task-info">
