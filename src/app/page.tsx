@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -1157,15 +1157,17 @@ function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { ta
 }
 
 // ── ANALYTICS SECTION ──────────────────────────────────────────────
-function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
+const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
-  const weeklyData = getWeeklyProgressData(tasks);
-  const categoryData = getCategoryBreakdown(tasks);
-  const streakData = getStreakHistory(habits);
-  const completionStats = getCompletionStats(tasks);
+  // Memoized data transformations to prevent expensive recalculations on every re-render
+  // This is especially important since this component re-renders when tasks or habits change
+  const weeklyData = useMemo(() => getWeeklyProgressData(tasks), [tasks]);
+  const categoryData = useMemo(() => getCategoryBreakdown(tasks), [tasks]);
+  const streakData = useMemo(() => getStreakHistory(habits), [habits]);
+  const completionStats = useMemo(() => getCompletionStats(tasks), [tasks]);
 
-  async function handleExportPDF() {
+  const handleExportPDF = useCallback(async () => {
     setLoading(true);
     try {
       await exportDataToPDF(tasks, habits, settings, smokeStats);
@@ -1174,7 +1176,7 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
     } finally {
       setLoading(false);
     }
-  }
+  }, [tasks, habits, settings, smokeStats]);
 
   return (
     <div>
@@ -1265,7 +1267,7 @@ function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task
       <StreakRanking data={streakData} />
     </div>
   );
-}
+});
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
 function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
