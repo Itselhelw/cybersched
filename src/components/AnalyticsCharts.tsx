@@ -1,8 +1,10 @@
 'use client';
 
+import React, { memo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
+// Memoized to prevent expensive re-renders during high-frequency dashboard updates
+export const WeeklyProgressChart = memo(function WeeklyProgressChart({ data }: { data: Array<{ day: string; completed: number; total: number }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -21,9 +23,10 @@ export function WeeklyProgressChart({ data }: { data: Array<{ day: string; compl
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
+// Memoized to prevent expensive re-renders during high-frequency dashboard updates
+export const CategoryBreakdownChart = memo(function CategoryBreakdownChart({ data }: { data: Array<{ name: string; completed: number; total: number; color: string }> }) {
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
@@ -42,32 +45,35 @@ export function CategoryBreakdownChart({ data }: { data: Array<{ name: string; c
       </ResponsiveContainer>
     </div>
   );
-}
+});
 
-export function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+// Memoized to prevent expensive re-renders during high-frequency dashboard updates
+export const StreakRanking = memo(function StreakRanking({ data }: { data: Array<{ name: string; streak: number; color: string }> }) {
+  // Use spread operator to avoid mutating props in-place
+  const sortedData = [...data].sort((a, b) => b.streak - a.streak);
+
   return (
     <div className="card" style={{ padding: 20, marginBottom: 20 }}>
       <div className="card-header" style={{ marginBottom: 20 }}>
         <div className="card-title">// Streak Ranking</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data
-          .sort((a, b) => b.streak - a.streak)
-          .map((item, idx) => (
-            <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,245,255,0.05)', borderRadius: 8, borderLeft: `4px solid ${item.color}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 18, fontWeight: 700, color: '#00f5ff', minWidth: 30 }}>#{idx + 1}</span>
-                <span style={{ color: '#a0a0c0' }}>{item.name}</span>
-              </div>
-              <span style={{ fontSize: 18, fontWeight: 700, color: item.color }}>🔥 {item.streak}d</span>
+        {sortedData.map((item, idx) => (
+          <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,245,255,0.05)', borderRadius: 8, borderLeft: `4px solid ${item.color}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: '#00f5ff', minWidth: 30 }}>#{idx + 1}</span>
+              <span style={{ color: '#a0a0c0' }}>{item.name}</span>
             </div>
-          ))}
+            <span style={{ fontSize: 18, fontWeight: 700, color: item.color }}>🔥 {item.streak}d</span>
+          </div>
+        ))}
       </div>
     </div>
   );
-}
+});
 
-export function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
+// Memoized to prevent expensive re-renders during high-frequency dashboard updates
+export const CompletionDonut = memo(function CompletionDonut({ stats }: { stats: { total: number; completed: number; pending: number; percentage: number } }) {
   const data = [
     { name: 'Completed', value: stats.completed, color: '#00ff88' },
     { name: 'Pending', value: stats.pending, color: '#6b6b8a' },
@@ -97,4 +103,4 @@ export function CompletionDonut({ stats }: { stats: { total: number; completed: 
       </div>
     </div>
   );
-}
+});
