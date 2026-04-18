@@ -123,7 +123,11 @@ export function useAppState(now: Date | null) {
     // Memoize the daily timestamp to stabilize callbacks and effects
     const dailyTimestamp = now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() : 0;
 
-    const syncTaskToHabit = useCallback((category: Category) => {
+    /**
+     * Consolidates habit synchronization to reduce redundant calculations and state updates.
+     * Calculates shared data (weekDates, doneTaskMap) once and performs a single state update.
+     */
+    const syncTasksToHabits = useCallback((targetCategories?: Category[]) => {
         if (!dailyTimestamp) return;
         const currentToday = todayStr(new Date(dailyTimestamp));
 
@@ -135,10 +139,12 @@ export function useAppState(now: Date | null) {
 
         const doneTaskMap = new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
 
-        // Update habits based on current tasks
+        // Update habits based on current tasks in a single pass
         setHabitsRaw(prev => prev.map(h => {
-            if (h.id !== category) return h;
+            // If targetCategories is provided, only update those. Otherwise update all.
+            if (targetCategories && !targetCategories.includes(h.id as Category)) return h;
 
+            const category = h.id as Category;
             const weekProgress = calcWeekProgress(category, weekDates, doneTaskMap);
 
             const wasAlreadyDone = h.todayDone;
@@ -165,6 +171,11 @@ export function useAppState(now: Date | null) {
         }));
     }, [dailyTimestamp, tasks, setHabitsRaw]);
 
+    // Maintained for backward compatibility and specific category syncs
+    const syncTaskToHabit = useCallback((category: Category) => {
+        syncTasksToHabits([category]);
+    }, [syncTasksToHabits]);
+
     // ── TASK ACTIONS ──────────────────────────────────────────────
     const completeTask = useCallback((taskId: string) => {
         let completedCategory: Category | undefined;
@@ -187,10 +198,8 @@ export function useAppState(now: Date | null) {
 
     // Sync effect when tasks change - only sync when tasks or day changes
     useEffect(() => {
-        if (!dailyTimestamp) return;
-        const categories: Category[] = ['body', 'mind', 'work', 'quit', 'fun'];
-        categories.forEach(cat => syncTaskToHabit(cat));
-    }, [tasks, dailyTimestamp, syncTaskToHabit]);
+        syncTasksToHabits();
+    }, [tasks, dailyTimestamp, syncTasksToHabits]);
 
     const addTask = useCallback((taskData: Omit<Task, 'id' | 'done' | 'date'>) => {
         const newTask: Task = {
@@ -321,7 +330,7 @@ export function useAppState(now: Date | null) {
         // Actions
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
-        toggleHabit, syncTaskToHabit,
+        toggleHabit, syncTaskToHabit, syncTasksToHabits,
         setQuitDate, setSettings, setOnboarded,
         notify, logEvent,
     }), [
@@ -332,7 +341,7 @@ export function useAppState(now: Date | null) {
         habitsWithProgress,
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
-        toggleHabit, syncTaskToHabit,
+        toggleHabit, syncTaskToHabit, syncTasksToHabits,
         setQuitDate, setSettings, setOnboarded,
         notify, logEvent
     ]);
