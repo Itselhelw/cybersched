@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -2772,17 +2772,28 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
-  // Gamification calculations
-  const dailyScore = calculateDailyPoints(
+  // Gamification calculations - memoized to prevent re-calc on every clock tick
+  const dailyScore = useMemo(() => calculateDailyPoints(
     completedToday,
     habitsWithProgress.filter((h: any) => h.todayDone).length,
     habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  ), [completedToday, habitsWithProgress]);
 
-  const weekDates = getWeekDates(now);
+  const bestStreak = useMemo(() => habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0, [habitsWithProgress]);
+
+  const weeklyScore = useMemo(() => {
+    const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+    return weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  }, [completedToday, totalToday, bestStreak, habitsWithProgress]);
+
+  const weekDates = useMemo(() => getWeekDates(now), [currentTodayStr]);
+
+  // Memoize today's tasks to avoid filtering and sorting on every clock tick
+  const sortedTodayTasks = useMemo(() => {
+    return tasks
+      .filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''))
+      .sort((a: any, b: any) => a.time.localeCompare(b.time));
+  }, [tasks, currentTodayStr]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2882,7 +2893,7 @@ export default function Dashboard() {
                     <div className="card-title">{"// Today's Mission"}</div>
                     <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
                   </div>
-                  {tasks.filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a: any, b: any) => a.time.localeCompare(b.time)).map((task: any) => (
+                  {sortedTodayTasks.map((task: any) => (
                     <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => completeTask(task.id)}>
                       <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
                       <div className="task-info">
