@@ -84,7 +84,11 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 function todayStr(baseDate?: Date | null) {
-    return baseDate ? baseDate.toISOString().split('T')[0] : '';
+    if (!baseDate) return '';
+    const year = baseDate.getFullYear();
+    const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+    const day = String(baseDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function calcWeekProgress(category: Category, weekDates: string[], doneTaskMap: Set<string>): number {
