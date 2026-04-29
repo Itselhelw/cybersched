@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -954,7 +954,7 @@ const HabitsSection = memo(function HabitsSection({ habits, setHabits, toggleHab
 });
 
 // ── QUIT COUNTER CARD ─────────────────────────────────────────────
-function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
+const QuitCounterCard = memo(function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
   quitDate: string;
   setQuitDate: (d: string) => void;
   smokeStats: SmokeStats;
@@ -1093,7 +1093,7 @@ function QuitCounterCard({ quitDate, setQuitDate, smokeStats }: {
       )}
     </div>
   );
-}
+});
 
 // ── STATS SECTION ─────────────────────────────────────────────────
 const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQuitDate, smokeStats }: { tasks: Task[]; habits: Habit[]; quitDate: string; setQuitDate: (d: string) => void; smokeStats: SmokeStats }) {
@@ -1172,10 +1172,10 @@ const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQu
 const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
-  const weeklyData = getWeeklyProgressData(tasks);
-  const categoryData = getCategoryBreakdown(tasks);
-  const streakData = getStreakHistory(habits);
-  const completionStats = getCompletionStats(tasks);
+  const weeklyData = useMemo(() => getWeeklyProgressData(tasks), [tasks]);
+  const categoryData = useMemo(() => getCategoryBreakdown(tasks), [tasks]);
+  const streakData = useMemo(() => getStreakHistory(habits), [habits]);
+  const completionStats = useMemo(() => getCompletionStats(tasks), [tasks]);
 
   async function handleExportPDF() {
     setLoading(true);
@@ -1937,7 +1937,7 @@ const SettingsSection = memo(function SettingsSection({ settings, setSettings, t
 });
 
 // ── AI MOTIVATION CARD ────────────────────────────────────────────
-function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goals }: {
+const AIMotivationCard = memo(function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goals }: {
   settings: Settings;
   smokeStats: SmokeStats;
   gymStreak: number;
@@ -1986,7 +1986,7 @@ function AIMotivationCard({ settings, smokeStats, gymStreak, completionPct, goal
       </div>
     </div>
   );
-}
+});
 
 // ── POMODORO TIMER ────────────────────────────────────────────────
 const POMODORO_MODES = {
@@ -1995,7 +1995,7 @@ const POMODORO_MODES = {
   longBreak: { label: 'LONG BREAK', time: 15 * 60, color: 'var(--green)' },
 } as const;
 
-function PomodoroTimer() {
+const PomodoroTimer = memo(function PomodoroTimer() {
   const [count, setCount] = useLocalStorage<number>('cybersched-pomodoros', 0);
   const [mode, setMode] = useState<'work' | 'shortBreak' | 'longBreak'>('work');
   const [time, setTime] = useState(25 * 60);
@@ -2068,7 +2068,7 @@ function PomodoroTimer() {
       </div>
     </div>
   );
-}
+});
 
 // ── AI CHAT CONTROLLER ────────────────────────────────────────────
 interface ChatMessage {
@@ -2772,17 +2772,22 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
-  // Gamification calculations
-  const dailyScore = calculateDailyPoints(
+  // Gamification calculations - Memoized to prevent O(N) calculations on every per-second clock tick
+  const dailyScore = useMemo(() => calculateDailyPoints(
     completedToday,
     habitsWithProgress.filter((h: any) => h.todayDone).length,
     habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  ), [completedToday, habitsWithProgress]);
 
-  const weekDates = getWeekDates(now);
+  const bestStreak = useMemo(() => habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0, [habitsWithProgress]);
+
+  const weeklyScore = useMemo(() => {
+    const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+    return weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  }, [completedToday, totalToday, bestStreak, habitsWithProgress]);
+
+  // Use stable dependency for weekDates to prevent downstream re-renders
+  const weekDates = useMemo(() => getWeekDates(now), [currentTodayStr]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
