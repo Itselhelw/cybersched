@@ -52,7 +52,7 @@ export const StreakRanking = memo(function StreakRanking({ data }: { data: Array
         <div className="card-title">// Streak Ranking</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data
+        {[...data]
           .sort((a, b) => b.streak - a.streak)
           .map((item, idx) => (
             <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,245,255,0.05)', borderRadius: 8, borderLeft: `4px solid ${item.color}` }}>
