@@ -5,3 +5,7 @@
 ## 2026-02-23 - Set-based Lookup for Habit Progress
 **Learning:** Iterating over tasks with `.some()` inside a loop (like habit categories or week dates) leads to O(N*M) complexity. Pre-calculating a `Set` of completed task identifiers (`category:date`) allows for O(1) lookups, significantly improving performance when the task list grows.
 **Action:** Pre-process task arrays into `Set` or `Map` data structures before performing repeated lookups in loops.
+
+## 2026-05-06 - Memoization vs. Unused High-Frequency Props
+**Learning:** Components wrapped in `React.memo` will still re-render if they receive props that change frequently (like a per-second clock object), even if the prop is not used in the component body. Reference stability is strictly required for all props to prevent 're-render waterfalls' in architectures with a central clock.
+**Action:** Audit and remove any unused or frequently-changing props from memoized components to ensure `React.memo` actually skips re-renders.
