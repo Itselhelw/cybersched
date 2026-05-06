@@ -84,7 +84,10 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 function todayStr(baseDate?: Date | null) {
-    return baseDate ? baseDate.toISOString().split('T')[0] : '';
+    if (!baseDate) return '';
+    const d = new Date(baseDate);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split('T')[0];
 }
 
 function calcWeekProgress(category: Category, weekDates: string[], doneTaskMap: Set<string>): number {
@@ -267,7 +270,9 @@ export function useAppState(now: Date | null) {
 
     // ── COMPUTED STATS ────────────────────────────────────────────
     const todayTasks = useMemo(() =>
-        tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')),
+        tasks
+            .filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''))
+            .sort((a, b) => a.time.localeCompare(b.time)),
         [tasks, currentTodayStr]
     );
 
