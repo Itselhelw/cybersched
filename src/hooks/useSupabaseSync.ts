@@ -79,25 +79,27 @@ export function useSupabaseSync() {
 
     // ── HABITS ────────────────────────────────────────────
     async function syncHabits(habits: unknown[]) {
-        if (!userId) return;
+        if (!userId || habits.length === 0) return;
         setSyncing(true);
         try {
-            for (const habit of habits as Record<string, unknown>[]) {
-                await supabase.from('habits').upsert({
-                    user_id: userId,
-                    habit_key: habit.id,
-                    label: habit.label,
-                    icon: habit.icon,
-                    color: habit.color,
-                    streak: habit.streak,
-                    best_streak: habit.bestStreak,
-                    today_done: habit.todayDone,
-                    week_progress: habit.weekProgress,
-                    total_days: habit.totalDays,
-                    last_done: habit.lastDone || '',
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: 'user_id,habit_key' });
-            }
+            // Batch upsert habits to reduce network overhead from N requests to 1
+            const payload = (habits as Record<string, unknown>[]).map(habit => ({
+                user_id: userId,
+                habit_key: habit.id,
+                label: habit.label,
+                icon: habit.icon,
+                color: habit.color,
+                streak: habit.streak,
+                best_streak: habit.bestStreak,
+                today_done: habit.todayDone,
+                week_progress: habit.weekProgress,
+                total_days: habit.totalDays,
+                last_done: habit.lastDone || '',
+                updated_at: new Date().toISOString(),
+            }));
+
+            await supabase.from('habits').upsert(payload, { onConflict: 'user_id,habit_key' });
+
             setLastSync(new Date().toTimeString().slice(0, 5));
             setSyncError('');
         } catch (err) {
