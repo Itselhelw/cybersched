@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -1172,10 +1172,11 @@ const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQu
 const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
-  const weeklyData = getWeeklyProgressData(tasks);
-  const categoryData = getCategoryBreakdown(tasks);
-  const streakData = getStreakHistory(habits);
-  const completionStats = getCompletionStats(tasks);
+  // Memoize O(N) calculations to prevent them from running on every re-render (e.g. when clock updates)
+  const weeklyData = useMemo(() => getWeeklyProgressData(tasks), [tasks]);
+  const categoryData = useMemo(() => getCategoryBreakdown(tasks), [tasks]);
+  const streakData = useMemo(() => getStreakHistory(habits), [habits]);
+  const completionStats = useMemo(() => getCompletionStats(tasks), [tasks]);
 
   async function handleExportPDF() {
     setLoading(true);
@@ -2772,17 +2773,36 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
-  // Gamification calculations
-  const dailyScore = calculateDailyPoints(
-    completedToday,
+  // Gamification calculations - memoized to prevent re-calculation on every second tick
+  // These only change when tasks, habits, or the day changes
+  const habitsDoneCount = useMemo(() =>
     habitsWithProgress.filter((h: any) => h.todayDone).length,
-    habitsWithProgress.filter((h: any) => h.streak > 0).length
+    [habitsWithProgress]
   );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
 
-  const weekDates = getWeekDates(now);
+  const dailyScore = useMemo(() => calculateDailyPoints(
+    completedToday,
+    habitsDoneCount,
+    habitsWithProgress.filter((h: any) => h.streak > 0).length
+  ), [completedToday, habitsDoneCount, habitsWithProgress]);
+
+  const bestStreak = useMemo(() =>
+    habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0,
+    [habitsWithProgress]
+  );
+
+  const weeklyScore = useMemo(() =>
+    completedToday + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50),
+    [completedToday, bestStreak, habitsWithProgress]
+  );
+
+  // Stabilize weekDates to only update once per day
+  const weekDates = useMemo(() => getWeekDates(now), [currentTodayStr]);
+
+  const memoizedBadges = useMemo(() =>
+    BADGES.filter((b: any) => unlockedBadges.includes(b.id)),
+    [unlockedBadges]
+  );
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2947,12 +2967,12 @@ export default function Dashboard() {
 
                 <GamificationPanel
                   tasksCompleted={completedToday}
-                  habitsCompleted={habitsWithProgress.filter((h: any) => h.todayDone).length}
+                  habitsCompleted={habitsDoneCount}
                   dailyScore={dailyScore}
                   weeklyScore={weeklyScore}
                   currentStreak={bestStreak}
                   unlockedAchievements={unlockedAchievements}
-                  unlockedBadges={BADGES.filter((b: any) => unlockedBadges.includes(b.id))}
+                  unlockedBadges={memoizedBadges}
                 />
 
                 <div className="card" style={{ border: '1px solid var(--green-glow)' }}>

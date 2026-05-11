@@ -189,25 +189,35 @@ export async function exportDataToPDF(
 export function getWeeklyProgressData(tasks: Task[]): Array<{ day: string; completed: number; total: number }> {
   const today = new Date();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const weekData = [];
 
-  for (let i = 0; i < 7; i++) {
+  // Pre-calculate the 7 dates for the current week (Sun-Sat)
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today);
     date.setDate(today.getDate() - today.getDay() + i);
-    const dateStr = date.toISOString().split('T')[0];
+    return date.toISOString().split('T')[0];
+  });
 
-    const dayTasks = tasks.filter(t => t.date === dateStr);
-    const completed = dayTasks.filter(t => t.done).length;
-    const total = dayTasks.length;
+  // Initialize counts for each date to avoid repeated filtering
+  const counts: Record<string, { completed: number; total: number }> = {};
+  weekDates.forEach(d => {
+    counts[d] = { completed: 0, total: 0 };
+  });
 
-    weekData.push({
-      day: weekDays[i],
-      completed,
-      total: total > 0 ? total : 1,
-    });
-  }
+  // Single pass over tasks to populate counts: O(N) instead of O(7*N)
+  tasks.forEach(t => {
+    if (counts[t.date]) {
+      counts[t.date].total++;
+      if (t.done) {
+        counts[t.date].completed++;
+      }
+    }
+  });
 
-  return weekData;
+  return weekDates.map((dateStr, i) => ({
+    day: weekDays[i],
+    completed: counts[dateStr].completed,
+    total: counts[dateStr].total > 0 ? counts[dateStr].total : 1,
+  }));
 }
 
 export function getCategoryBreakdown(tasks: Task[]): Array<{ name: string; completed: number; total: number; color: string }> {
