@@ -116,9 +116,13 @@ export function useAppState(now: Date | null) {
         return Array.from({ length: 7 }, (_, i) => {
             const d = new Date(dailyTimestamp);
             d.setDate(d.getDate() - d.getDay() + i);
-            return d.toISOString().split('T')[0];
+            return d;
         });
     }, [dailyTimestamp]);
+
+    const weekDatesStr = useMemo(() => {
+        return weekDates.map(d => d.toISOString().split('T')[0]);
+    }, [weekDates]);
 
     const doneTaskMap = useMemo(() => {
         return new Set(tasks.filter(t => t.done).map(t => `${t.category}:${t.date}`));
@@ -143,7 +147,7 @@ export function useAppState(now: Date | null) {
 
         setHabitsRaw(prev => prev.map(h => {
             const category = h.id as Category;
-            const weekProgress = calcWeekProgress(category, weekDates, doneTaskMap);
+            const weekProgress = calcWeekProgress(category, weekDatesStr, doneTaskMap);
             const todayDone = doneTaskMap.has(`${category}:${currentTodayStr}`);
 
             // Streak logic: maintain current logic but process in one pass
@@ -169,7 +173,7 @@ export function useAppState(now: Date | null) {
                 lastDone: todayDone ? currentTodayStr : (wasAlreadyDone ? '' : h.lastDone),
             };
         }));
-    }, [currentTodayStr, weekDates, doneTaskMap, setHabitsRaw]);
+    }, [currentTodayStr, weekDatesStr, doneTaskMap, setHabitsRaw]);
 
     // ── TASK ACTIONS ──────────────────────────────────────────────
     const completeTask = useCallback((taskId: string) => {
@@ -267,7 +271,9 @@ export function useAppState(now: Date | null) {
 
     // ── COMPUTED STATS ────────────────────────────────────────────
     const todayTasks = useMemo(() =>
-        tasks.filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')),
+        tasks
+            .filter(t => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''))
+            .sort((a, b) => a.time.localeCompare(b.time)),
         [tasks, currentTodayStr]
     );
 
@@ -284,9 +290,9 @@ export function useAppState(now: Date | null) {
 
         return habits.map(h => ({
             ...h,
-            weekProgress: calcWeekProgress(h.id as Category, weekDates, doneTaskMap),
+            weekProgress: calcWeekProgress(h.id as Category, weekDatesStr, doneTaskMap),
         }));
-    }, [habits, weekDates, doneTaskMap, dailyTimestamp]);
+    }, [habits, weekDatesStr, doneTaskMap, dailyTimestamp]);
 
     // ── ACHIEVEMENT SYSTEM ────────────────────────────────────────
     // Only run when meaningful state changes (tasks, habits, or day changes), not every second
@@ -308,7 +314,7 @@ export function useAppState(now: Date | null) {
         unlockedAchievements, unlockedBadges,
         // Computed
         todayTasks, completedToday, totalToday, completionPct, currentTodayStr,
-        habitsWithProgress,
+        habitsWithProgress, weekDates,
         // Actions
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
@@ -320,7 +326,7 @@ export function useAppState(now: Date | null) {
         onboarded, eventLog, notifications,
         unlockedAchievements, unlockedBadges,
         todayTasks, completedToday, totalToday, completionPct, currentTodayStr,
-        habitsWithProgress,
+        habitsWithProgress, weekDates,
         addTask, completeTask, deleteTask,
         setTasksRaw, setHabitsRaw,
         toggleHabit, syncTasksToHabits,
