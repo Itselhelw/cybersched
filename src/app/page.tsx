@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -1280,19 +1280,14 @@ const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, setting
 });
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule, now, weekDates }: {
   addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
   notify: (msg: string, color?: string) => void;
   aiSchedule: any;
   setAiSchedule: (s: any) => void;
+  now: Date | null;
+  weekDates: Date[] | null;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
-  const weekDates = getWeekDates(now);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
   const [loading, setLoading] = useState(false);
   const [germanMonth] = useLocalStorage<number>('german-month', 1);
   const [error, setError] = useState('');
@@ -2759,10 +2754,10 @@ export default function Dashboard() {
   }, [lastActiveDate]);
 
   const {
-    tasks, habits, habitsWithProgress,
+    tasks, habits, habitsWithProgress, weekDates,
     settings, quitDate, smokeStats,
     unlockedAchievements, unlockedBadges,
-    currentTodayStr, completedToday, totalToday, completionPct,
+    currentTodayStr, todayTasks, completedToday, totalToday, completionPct,
     addTask, completeTask, toggleHabit, notify
   } = app;
 
@@ -2773,16 +2768,22 @@ export default function Dashboard() {
   const displayYear = now ? now.getFullYear() : '';
 
   // Gamification calculations
-  const dailyScore = calculateDailyPoints(
-    completedToday,
-    habitsWithProgress.filter((h: any) => h.todayDone).length,
-    habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  const habitsDoneCount = useMemo(() => habitsWithProgress.filter((h: any) => h.todayDone).length, [habitsWithProgress]);
+  const activeStreaksCount = useMemo(() => habitsWithProgress.filter((h: any) => h.streak > 0).length, [habitsWithProgress]);
 
-  const weekDates = getWeekDates(now);
+  const dailyScore = useMemo(() => calculateDailyPoints(
+    completedToday,
+    habitsDoneCount,
+    activeStreaksCount
+  ), [completedToday, habitsDoneCount, activeStreaksCount]);
+
+  const bestStreak = useMemo(() => habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0, [habitsWithProgress]);
+  const weeklyScore = useMemo(() => {
+    const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+    return weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  }, [completedToday, totalToday, bestStreak, habitsWithProgress]);
+
+  const unlockedBadgesList = useMemo(() => BADGES.filter((b: any) => unlockedBadges.includes(b.id)), [unlockedBadges]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2882,7 +2883,7 @@ export default function Dashboard() {
                     <div className="card-title">{"// Today's Mission"}</div>
                     <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
                   </div>
-                  {tasks.filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a: any, b: any) => a.time.localeCompare(b.time)).map((task: any) => (
+                  {todayTasks.map((task: any) => (
                     <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => completeTask(task.id)}>
                       <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
                       <div className="task-info">
@@ -2947,12 +2948,12 @@ export default function Dashboard() {
 
                 <GamificationPanel
                   tasksCompleted={completedToday}
-                  habitsCompleted={habitsWithProgress.filter((h: any) => h.todayDone).length}
+                  habitsCompleted={habitsDoneCount}
                   dailyScore={dailyScore}
                   weeklyScore={weeklyScore}
                   currentStreak={bestStreak}
                   unlockedAchievements={unlockedAchievements}
-                  unlockedBadges={BADGES.filter((b: any) => unlockedBadges.includes(b.id))}
+                  unlockedBadges={unlockedBadgesList}
                 />
 
                 <div className="card" style={{ border: '1px solid var(--green-glow)' }}>
@@ -2979,7 +2980,7 @@ export default function Dashboard() {
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={app.setTasksRaw} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
-        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
+        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} now={now} weekDates={weekDates} />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'cyber' && (
