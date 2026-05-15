@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -668,10 +668,10 @@ const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }
 };
 
 function todayStr(baseDate?: Date | null) {
-  if (baseDate) return baseDate.toISOString().split('T')[0];
-  // Fallback to current date (client-only) for contexts where no Date is passed
-  if (typeof window !== 'undefined') return new Date().toISOString().split('T')[0];
-  return '';
+  const d = baseDate || new Date();
+  const offset = d.getTimezoneOffset() * 60000;
+  const localDate = new Date(d.getTime() - offset);
+  return localDate.toISOString().split('T')[0];
 }
 
 function getWeekDates(baseDate?: Date | null): Date[] | null {
@@ -2772,17 +2772,30 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
-  // Gamification calculations
-  const dailyScore = calculateDailyPoints(
+  // Gamification calculations - Memoized to prevent O(H) per-second recalculation
+  const dailyScore = useMemo(() => calculateDailyPoints(
     completedToday,
     habitsWithProgress.filter((h: any) => h.todayDone).length,
     habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  ), [completedToday, habitsWithProgress]);
 
-  const weekDates = getWeekDates(now);
+  const bestStreak = useMemo(() => habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0, [habitsWithProgress]);
+
+  const weeklyScore = useMemo(() => {
+    const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+    return weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  }, [completedToday, totalToday, bestStreak, habitsWithProgress]);
+
+  // Memoize weekDates to only update when the day changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const weekDates = useMemo(() => getWeekDates(now), [currentTodayStr]);
+
+  // Memoize today's tasks to avoid expensive inline filter/sort every second
+  const sortedTodayTasks = useMemo(() => {
+    return tasks
+      .filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === ''))
+      .sort((a: any, b: any) => a.time.localeCompare(b.time));
+  }, [tasks, currentTodayStr]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2882,7 +2895,7 @@ export default function Dashboard() {
                     <div className="card-title">{"// Today's Mission"}</div>
                     <button className="card-action" onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
                   </div>
-                  {tasks.filter((t: any) => t.date === currentTodayStr || (currentTodayStr === '' && t.date === '')).sort((a: any, b: any) => a.time.localeCompare(b.time)).map((task: any) => (
+                  {sortedTodayTasks.map((task: any) => (
                     <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`} onClick={() => completeTask(task.id)}>
                       <div className={`task-check ${task.done ? 'done' : ''}`}>{task.done ? '✓' : ''}</div>
                       <div className="task-info">
@@ -2909,7 +2922,7 @@ export default function Dashboard() {
                       <div key={i} className="day-col">
                         <div className="day-header">
                           <div className="day-name">{DAYS[date.getDay()]}</div>
-                          <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
+                          <div className={`day-num ${date.toISOString().split('T')[0] === currentTodayStr ? 'today' : ''}`}>{date.getDate()}</div>
                         </div>
                         {(WEEK_SCHEDULE[i] || []).map((block, j) => (
                           <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
