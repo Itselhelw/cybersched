@@ -189,25 +189,35 @@ export async function exportDataToPDF(
 export function getWeeklyProgressData(tasks: Task[]): Array<{ day: string; completed: number; total: number }> {
   const today = new Date();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const weekData = [];
 
+  // Pre-calculate the dates for the current week (Sun-Sat) to enable O(1) lookup
+  const weekDates: Record<string, number> = {};
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - today.getDay() + i);
-    const dateStr = date.toISOString().split('T')[0];
-
-    const dayTasks = tasks.filter(t => t.date === dateStr);
-    const completed = dayTasks.filter(t => t.done).length;
-    const total = dayTasks.length;
-
-    weekData.push({
-      day: weekDays[i],
-      completed,
-      total: total > 0 ? total : 1,
-    });
+    const d = new Date(today);
+    d.setDate(today.getDate() - today.getDay() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    weekDates[dateStr] = i;
   }
 
-  return weekData;
+  // Initialize result array
+  const weekData = weekDays.map(day => ({ day, completed: 0, total: 0 }));
+
+  // Single pass through tasks (O(N)) replaces previous multiple filter calls (O(7*N))
+  tasks.forEach(task => {
+    const dayIndex = weekDates[task.date];
+    if (dayIndex !== undefined) {
+      weekData[dayIndex].total += 1;
+      if (task.done) {
+        weekData[dayIndex].completed += 1;
+      }
+    }
+  });
+
+  // Ensure total is at least 1 to prevent division by zero in charts
+  return weekData.map(d => ({
+    ...d,
+    total: d.total > 0 ? d.total : 1,
+  }));
 }
 
 export function getCategoryBreakdown(tasks: Task[]): Array<{ name: string; completed: number; total: number; color: string }> {
