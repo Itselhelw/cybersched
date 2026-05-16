@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -1172,10 +1172,10 @@ const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQu
 const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
   const [loading, setLoading] = useState(false);
 
-  const weeklyData = getWeeklyProgressData(tasks);
-  const categoryData = getCategoryBreakdown(tasks);
-  const streakData = getStreakHistory(habits);
-  const completionStats = getCompletionStats(tasks);
+  const weeklyData = useMemo(() => getWeeklyProgressData(tasks), [tasks]);
+  const categoryData = useMemo(() => getCategoryBreakdown(tasks), [tasks]);
+  const streakData = useMemo(() => getStreakHistory(habits), [habits]);
+  const completionStats = useMemo(() => getCompletionStats(tasks), [tasks]);
 
   async function handleExportPDF() {
     setLoading(true);
@@ -1280,19 +1280,14 @@ const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, setting
 });
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule, now, weekDates }: {
   addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
   notify: (msg: string, color?: string) => void;
   aiSchedule: any;
   setAiSchedule: (s: any) => void;
+  now: Date | null;
+  weekDates: Date[] | null;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
-  const weekDates = getWeekDates(now);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
   const [loading, setLoading] = useState(false);
   const [germanMonth] = useLocalStorage<number>('german-month', 1);
   const [error, setError] = useState('');
@@ -2772,17 +2767,26 @@ export default function Dashboard() {
   const displayDate = now ? now.getDate() : '';
   const displayYear = now ? now.getFullYear() : '';
 
-  // Gamification calculations
-  const dailyScore = calculateDailyPoints(
+  // Gamification calculations - memoized to prevent re-calculation on every per-second clock tick
+  const dailyScore = useMemo(() => calculateDailyPoints(
     completedToday,
     habitsWithProgress.filter((h: any) => h.todayDone).length,
     habitsWithProgress.filter((h: any) => h.streak > 0).length
-  );
-  const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
-  const weeklyStats = { completed: completedToday, total: totalToday || 1 };
-  const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  ), [completedToday, habitsWithProgress]);
 
-  const weekDates = getWeekDates(now);
+  const bestStreak = useMemo(() =>
+    habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0,
+    [habitsWithProgress]
+  );
+
+  const weeklyScore = useMemo(() => {
+    const weeklyStats = { completed: completedToday, total: totalToday || 1 };
+    return weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
+  }, [completedToday, totalToday, bestStreak, habitsWithProgress]);
+
+  // Recalculate week dates only when the day changes, not every second
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const weekDates = useMemo(() => getWeekDates(now), [currentTodayStr]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2979,7 +2983,16 @@ export default function Dashboard() {
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={app.setTasksRaw} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
-        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
+        {activeNav === 'planner' && (
+          <PlannerSection
+            addTask={addTask}
+            notify={notify}
+            aiSchedule={aiSchedule}
+            setAiSchedule={setAiSchedule}
+            now={now}
+            weekDates={weekDates}
+          />
+        )}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'cyber' && (
