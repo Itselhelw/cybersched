@@ -186,28 +186,40 @@ export async function exportDataToPDF(
 
 // ── ANALYTICS DATA GENERATORS ──────────────────────────
 
-export function getWeeklyProgressData(tasks: Task[]): Array<{ day: string; completed: number; total: number }> {
-  const today = new Date();
+/**
+ * Generates weekly progress data in O(N) time.
+ * Uses currentTodayStr to determine the week range consistently with the app's central clock.
+ */
+export function getWeeklyProgressData(tasks: Task[], currentTodayStr?: string): Array<{ day: string; completed: number; total: number }> {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const weekData = [];
+  const today = currentTodayStr ? new Date(currentTodayStr) : new Date();
+  const weekDatesStr: string[] = [];
+  const weekDataMap: Record<string, { completed: number; total: number; day: string }> = {};
 
+  // Initialize the week map with the 7 days of the current week
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - today.getDay() + i);
-    const dateStr = date.toISOString().split('T')[0];
-
-    const dayTasks = tasks.filter(t => t.date === dateStr);
-    const completed = dayTasks.filter(t => t.done).length;
-    const total = dayTasks.length;
-
-    weekData.push({
-      day: weekDays[i],
-      completed,
-      total: total > 0 ? total : 1,
-    });
+    const d = new Date(today);
+    d.setDate(today.getDate() - today.getDay() + i);
+    const ds = d.toISOString().split('T')[0];
+    weekDatesStr.push(ds);
+    weekDataMap[ds] = { day: weekDays[i], completed: 0, total: 0 };
   }
 
-  return weekData;
+  // Single pass over tasks to aggregate data for the week
+  tasks.forEach(t => {
+    if (weekDataMap[t.date]) {
+      weekDataMap[t.date].total += 1;
+      if (t.done) {
+        weekDataMap[t.date].completed += 1;
+      }
+    }
+  });
+
+  return weekDatesStr.map(ds => ({
+    day: weekDataMap[ds].day,
+    completed: weekDataMap[ds].completed,
+    total: weekDataMap[ds].total > 0 ? weekDataMap[ds].total : 1,
+  }));
 }
 
 export function getCategoryBreakdown(tasks: Task[]): Array<{ name: string; completed: number; total: number; color: string }> {
