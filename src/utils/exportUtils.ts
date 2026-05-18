@@ -186,28 +186,42 @@ export async function exportDataToPDF(
 
 // ── ANALYTICS DATA GENERATORS ──────────────────────────
 
-export function getWeeklyProgressData(tasks: Task[]): Array<{ day: string; completed: number; total: number }> {
-  const today = new Date();
+export function getWeeklyProgressData(tasks: Task[], currentTodayStr?: string): Array<{ day: string; completed: number; total: number }> {
+  const today = currentTodayStr ? new Date(currentTodayStr) : new Date();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const weekData = [];
+
+  // 1. Generate the 7 dates for the current week based on 'today'
+  const weekDates: string[] = [];
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay());
 
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - today.getDay() + i);
-    const dateStr = date.toISOString().split('T')[0];
-
-    const dayTasks = tasks.filter(t => t.date === dateStr);
-    const completed = dayTasks.filter(t => t.done).length;
-    const total = dayTasks.length;
-
-    weekData.push({
-      day: weekDays[i],
-      completed,
-      total: total > 0 ? total : 1,
-    });
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    weekDates.push(d.toISOString().split('T')[0]);
   }
 
-  return weekData;
+  // 2. Single-pass O(N) aggregation of tasks into a map
+  const taskMap: Record<string, { completed: number; total: number }> = {};
+  tasks.forEach(t => {
+    if (!taskMap[t.date]) {
+      taskMap[t.date] = { completed: 0, total: 0 };
+    }
+    taskMap[t.date].total++;
+    if (t.done) {
+      taskMap[t.date].completed++;
+    }
+  });
+
+  // 3. Map the pre-calculated week dates to the aggregated data
+  return weekDates.map((dateStr, i) => {
+    const stats = taskMap[dateStr] || { completed: 0, total: 0 };
+    return {
+      day: weekDays[i],
+      completed: stats.completed,
+      total: stats.total > 0 ? stats.total : 1,
+    };
+  });
 }
 
 export function getCategoryBreakdown(tasks: Task[]): Array<{ name: string; completed: number; total: number; color: string }> {
