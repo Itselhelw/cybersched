@@ -82,22 +82,32 @@ export function useSupabaseSync() {
         if (!userId) return;
         setSyncing(true);
         try {
-            for (const habit of habits as Record<string, unknown>[]) {
-                await supabase.from('habits').upsert({
-                    user_id: userId,
-                    habit_key: habit.id,
-                    label: habit.label,
-                    icon: habit.icon,
-                    color: habit.color,
-                    streak: habit.streak,
-                    best_streak: habit.bestStreak,
-                    today_done: habit.todayDone,
-                    week_progress: habit.weekProgress,
-                    total_days: habit.totalDays,
-                    last_done: habit.lastDone || '',
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: 'user_id,habit_key' });
+            // OPTIMIZATION: Use batch upsert instead of sequential requests.
+            // This reduces network overhead from O(N) to O(1) requests per sync cycle.
+            // Expected impact: ~5x - 10x faster synchronization for users with many habits.
+            const habitRecords = (habits as Record<string, any>[]).map(habit => ({
+                user_id: userId,
+                habit_key: habit.id,
+                label: habit.label,
+                icon: habit.icon,
+                color: habit.color,
+                streak: habit.streak,
+                best_streak: habit.bestStreak,
+                today_done: habit.todayDone,
+                week_progress: habit.weekProgress,
+                total_days: habit.totalDays,
+                last_done: habit.lastDone || '',
+                updated_at: new Date().toISOString(),
+            }));
+
+            if (habitRecords.length > 0) {
+                const { error } = await supabase
+                    .from('habits')
+                    .upsert(habitRecords, { onConflict: 'user_id,habit_key' });
+
+                if (error) throw error;
             }
+
             setLastSync(new Date().toTimeString().slice(0, 5));
             setSyncError('');
         } catch (err) {
