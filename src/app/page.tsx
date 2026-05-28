@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -668,10 +668,12 @@ const WEEK_SCHEDULE: Record<number, { label: string; color: string; bg: string }
 };
 
 function todayStr(baseDate?: Date | null) {
-  if (baseDate) return baseDate.toISOString().split('T')[0];
-  // Fallback to current date (client-only) for contexts where no Date is passed
-  if (typeof window !== 'undefined') return new Date().toISOString().split('T')[0];
-  return '';
+  const d = baseDate || (typeof window !== 'undefined' ? new Date() : null);
+  if (!d) return '';
+  // Adjust for timezone offset to get the local date string in YYYY-MM-DD format
+  const offset = d.getTimezoneOffset();
+  const localDate = new Date(d.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().split('T')[0];
 }
 
 function getWeekDates(baseDate?: Date | null): Date[] | null {
@@ -1280,19 +1282,14 @@ const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, setting
 });
 
 // ── PLANNER SECTION ───────────────────────────────────────────────
-const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule }: {
+const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedule, setAiSchedule, currentTodayStr, weekDates }: {
   addTask: (t: Omit<Task, 'id' | 'done' | 'date'>) => void;
   notify: (msg: string, color?: string) => void;
   aiSchedule: any;
   setAiSchedule: (s: any) => void;
+  currentTodayStr: string;
+  weekDates: Date[] | null;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
-  const weekDates = getWeekDates(now);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
   const [loading, setLoading] = useState(false);
   const [germanMonth] = useLocalStorage<number>('german-month', 1);
   const [error, setError] = useState('');
@@ -1407,17 +1404,20 @@ const PlannerSection = memo(function PlannerSection({ addTask, notify, aiSchedul
             <span className="card-action">Click Generate to use AI</span>
           </div>
           <div className="week-grid">
-            {weekDates ? weekDates.map((date, i) => (
-              <div key={i} className="day-col">
-                <div className="day-header">
-                  <div className="day-name">{DAYS[date.getDay()]}</div>
-                  <div className={`day-num ${now && date.getDay() === now.getDay() && date.getDate() === now.getDate() ? 'today' : ''}`}>{date.getDate()}</div>
+            {weekDates ? weekDates.map((date, i) => {
+              const isToday = date.toISOString().split('T')[0] === currentTodayStr;
+              return (
+                <div key={i} className="day-col">
+                  <div className="day-header">
+                    <div className="day-name">{DAYS[date.getDay()]}</div>
+                    <div className={`day-num ${isToday ? 'today' : ''}`}>{date.getDate()}</div>
+                  </div>
+                  {(WEEK_SCHEDULE[i] || []).map((block, j) => (
+                    <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
+                  ))}
                 </div>
-                {(WEEK_SCHEDULE[i] || []).map((block, j) => (
-                  <div key={j} className="day-block" style={{ background: block.bg, color: block.color, border: `1px solid ${block.color}30` }}>{block.label}</div>
-                ))}
-              </div>
-            )) : (
+              );
+            }) : (
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', padding: 16 }}>Loading schedule...</div>
             )}
           </div>
@@ -2667,6 +2667,16 @@ const CyberSection = memo(function CyberSection({
 export default function Dashboard() {
   const [now, setNow] = useState<Date | null>(null);
   const app = useAppState(now);
+
+  const {
+    currentTodayStr
+  } = app;
+
+  const weekDates = useMemo(() => {
+    return getWeekDates(now);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTodayStr]);
+
   const [activeNav, setActiveNav] = useLocalStorage<NavSection>('cybersched-nav', 'dashboard');
   const [aiSchedule, setAiSchedule] = useLocalStorage<any>('cybersched-ai-schedule', null);
   const [showAddTask, setShowAddTask] = useState(false);
@@ -2762,7 +2772,7 @@ export default function Dashboard() {
     tasks, habits, habitsWithProgress,
     settings, quitDate, smokeStats,
     unlockedAchievements, unlockedBadges,
-    currentTodayStr, completedToday, totalToday, completionPct,
+    completedToday, totalToday, completionPct,
     addTask, completeTask, toggleHabit, notify
   } = app;
 
@@ -2781,8 +2791,6 @@ export default function Dashboard() {
   const bestStreak = habitsWithProgress.length > 0 ? Math.max(...habitsWithProgress.map((h: any) => h.streak)) : 0;
   const weeklyStats = { completed: completedToday, total: totalToday || 1 };
   const weeklyScore = weeklyStats.completed + bestStreak * 25 + (habitsWithProgress.filter((h: any) => h.weekProgress > 50).length * 50);
-
-  const weekDates = getWeekDates(now);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -2979,7 +2987,7 @@ export default function Dashboard() {
         {activeNav === 'tasks' && <TasksSection tasks={tasks} setTasks={app.setTasksRaw} currentTodayStr={currentTodayStr} />}
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
-        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
+        {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} currentTodayStr={currentTodayStr} weekDates={weekDates} />}
         {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'cyber' && (

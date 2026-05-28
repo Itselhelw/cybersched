@@ -84,7 +84,11 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 function todayStr(baseDate?: Date | null) {
-    return baseDate ? baseDate.toISOString().split('T')[0] : '';
+    if (!baseDate) return '';
+    // Adjust for timezone offset to get the local date string in YYYY-MM-DD format
+    const offset = baseDate.getTimezoneOffset();
+    const localDate = new Date(baseDate.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().split('T')[0];
 }
 
 function calcWeekProgress(category: Category, weekDates: string[], doneTaskMap: Set<string>): number {
