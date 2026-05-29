@@ -5,3 +5,7 @@
 ## 2026-02-23 - Set-based Lookup for Habit Progress
 **Learning:** Iterating over tasks with `.some()` inside a loop (like habit categories or week dates) leads to O(N*M) complexity. Pre-calculating a `Set` of completed task identifiers (`category:date`) allows for O(1) lookups, significantly improving performance when the task list grows.
 **Action:** Pre-process task arrays into `Set` or `Map` data structures before performing repeated lookups in loops.
+
+## 2026-05-29 - Initial Clock Hydration with useMemo
+**Learning:** In components with a per-second clock that starts at null, memoizing derived values (like week dates) using only a stable daily string dependency can lead to "hydration drift" where the value remains null even after the clock starts.
+**Action:** Include a boolean flag like `now !== null` in the dependency array to ensure the initial tick populates the memoized value while maintaining stability for subsequent ticks.
