@@ -186,28 +186,43 @@ export async function exportDataToPDF(
 
 // ── ANALYTICS DATA GENERATORS ──────────────────────────
 
-export function getWeeklyProgressData(tasks: Task[]): Array<{ day: string; completed: number; total: number }> {
-  const today = new Date();
+export function getWeeklyProgressData(tasks: Task[], currentTodayStr?: string): Array<{ day: string; completed: number; total: number }> {
+  const today = currentTodayStr ? new Date(currentTodayStr) : new Date();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const weekData = [];
+
+  // 1. Generate the 7 date strings for the current week (Sun-Sat)
+  const weekDatesStr: string[] = [];
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - today.getDay());
 
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - today.getDay() + i);
-    const dateStr = date.toISOString().split('T')[0];
-
-    const dayTasks = tasks.filter(t => t.date === dateStr);
-    const completed = dayTasks.filter(t => t.done).length;
-    const total = dayTasks.length;
-
-    weekData.push({
-      day: weekDays[i],
-      completed,
-      total: total > 0 ? total : 1,
-    });
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
+    weekDatesStr.push(d.toISOString().split('T')[0]);
   }
 
-  return weekData;
+  // 2. Initialize a map for O(1) lookup during the single pass
+  const statsMap: Record<string, { completed: number; total: number }> = {};
+  weekDatesStr.forEach(dateStr => {
+    statsMap[dateStr] = { completed: 0, total: 0 };
+  });
+
+  // 3. Single pass O(N) over tasks
+  tasks.forEach(task => {
+    if (statsMap[task.date]) {
+      statsMap[task.date].total++;
+      if (task.done) {
+        statsMap[task.date].completed++;
+      }
+    }
+  });
+
+  // 4. Transform back to the expected array format
+  return weekDatesStr.map((dateStr, i) => ({
+    day: weekDays[i],
+    completed: statsMap[dateStr].completed,
+    total: statsMap[dateStr].total > 0 ? statsMap[dateStr].total : 1,
+  }));
 }
 
 export function getCategoryBreakdown(tasks: Task[]): Array<{ name: string; completed: number; total: number; color: string }> {
