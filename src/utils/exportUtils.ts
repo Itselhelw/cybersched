@@ -186,28 +186,42 @@ export async function exportDataToPDF(
 
 // ── ANALYTICS DATA GENERATORS ──────────────────────────
 
-export function getWeeklyProgressData(tasks: Task[]): Array<{ day: string; completed: number; total: number }> {
-  const today = new Date();
+export function getWeeklyProgressData(tasks: Task[], currentTodayStr?: string): Array<{ day: string; completed: number; total: number }> {
+  const today = currentTodayStr ? new Date(currentTodayStr) : new Date();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const weekData = [];
+
+  // 1. Calculate the dates for the current week (Sunday to Saturday)
+  const weekDatesStr: string[] = [];
+  const baseDate = new Date(today);
+  baseDate.setDate(today.getDate() - today.getDay()); // Sunday
 
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - today.getDay() + i);
-    const dateStr = date.toISOString().split('T')[0];
-
-    const dayTasks = tasks.filter(t => t.date === dateStr);
-    const completed = dayTasks.filter(t => t.done).length;
-    const total = dayTasks.length;
-
-    weekData.push({
-      day: weekDays[i],
-      completed,
-      total: total > 0 ? total : 1,
-    });
+    const d = new Date(baseDate);
+    d.setDate(baseDate.getDate() + i);
+    weekDatesStr.push(d.toISOString().split('T')[0]);
   }
 
-  return weekData;
+  // 2. Aggregate task data in a single pass O(N)
+  const statsByDate: Record<string, { completed: number; total: number }> = {};
+  tasks.forEach(t => {
+    if (!statsByDate[t.date]) {
+      statsByDate[t.date] = { completed: 0, total: 0 };
+    }
+    statsByDate[t.date].total++;
+    if (t.done) {
+      statsByDate[t.date].completed++;
+    }
+  });
+
+  // 3. Map the aggregated data back to the week structure
+  return weekDatesStr.map((dateStr, i) => {
+    const stats = statsByDate[dateStr] || { completed: 0, total: 0 };
+    return {
+      day: weekDays[i],
+      completed: stats.completed,
+      total: stats.total > 0 ? stats.total : 1, // Preserve original logic for empty days
+    };
+  });
 }
 
 export function getCategoryBreakdown(tasks: Task[]): Array<{ name: string; completed: number; total: number; color: string }> {
