@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAppState, type Task, type Habit, type Category, type NavSection, type Settings, type SmokeStats } from '@/hooks/useAppState';
 import { WeeklyProgressChart, CategoryBreakdownChart, StreakRanking, CompletionDonut } from '@/components/AnalyticsCharts';
@@ -1169,15 +1169,16 @@ const StatsSection = memo(function StatsSection({ tasks, habits, quitDate, setQu
 });
 
 // ── ANALYTICS SECTION ──────────────────────────────────────────────
-const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats }) {
+const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, settings, smokeStats, currentTodayStr }: { tasks: Task[]; habits: Habit[]; settings: Settings; smokeStats: SmokeStats; currentTodayStr: string }) {
   const [loading, setLoading] = useState(false);
 
-  const weeklyData = getWeeklyProgressData(tasks);
-  const categoryData = getCategoryBreakdown(tasks);
-  const streakData = getStreakHistory(habits);
-  const completionStats = getCompletionStats(tasks);
+  // Memoize data transformations to avoid redundant O(N) calculations when smokeStats (updated every min) or other props change
+  const weeklyData = useMemo(() => getWeeklyProgressData(tasks, currentTodayStr), [tasks, currentTodayStr]);
+  const categoryData = useMemo(() => getCategoryBreakdown(tasks), [tasks]);
+  const streakData = useMemo(() => getStreakHistory(habits), [habits]);
+  const completionStats = useMemo(() => getCompletionStats(tasks), [tasks]);
 
-  async function handleExportPDF() {
+  const handleExportPDF = useCallback(async () => {
     setLoading(true);
     try {
       await exportDataToPDF(tasks, habits, settings, smokeStats);
@@ -1186,7 +1187,11 @@ const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, setting
     } finally {
       setLoading(false);
     }
-  }
+  }, [tasks, habits, settings, smokeStats]);
+
+  const handleExportTasks = useCallback(() => exportTasksToCSV(tasks), [tasks]);
+  const handleExportHabits = useCallback(() => exportHabitsToCSV(habits), [habits]);
+  const handleExportAll = useCallback(() => exportAllDataToCSV(tasks, habits), [tasks, habits]);
 
   return (
     <div>
@@ -1199,7 +1204,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, setting
       {/* Export Buttons */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
         <button
-          onClick={() => exportTasksToCSV(tasks)}
+          onClick={handleExportTasks}
           style={{
             padding: '12px 16px',
             background: 'linear-gradient(135deg, #00ff88, #00cc6a)',
@@ -1216,7 +1221,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, setting
           📥 Tasks CSV
         </button>
         <button
-          onClick={() => exportHabitsToCSV(habits)}
+          onClick={handleExportHabits}
           style={{
             padding: '12px 16px',
             background: 'linear-gradient(135deg, #00f5ff, #0099cc)',
@@ -1233,7 +1238,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ tasks, habits, setting
           📥 Habits CSV
         </button>
         <button
-          onClick={() => exportAllDataToCSV(tasks, habits)}
+          onClick={handleExportAll}
           style={{
             padding: '12px 16px',
             background: 'linear-gradient(135deg, #ff8c00, #ff6600)',
@@ -2980,7 +2985,7 @@ export default function Dashboard() {
         {activeNav === 'habits' && <HabitsSection habits={habitsWithProgress} setHabits={app.setHabitsRaw} toggleHabit={toggleHabit} />}
         {activeNav === 'stats' && <StatsSection tasks={tasks} habits={habitsWithProgress} quitDate={quitDate} setQuitDate={app.setQuitDate} smokeStats={smokeStats} />}
         {activeNav === 'planner' && <PlannerSection addTask={addTask} notify={notify} aiSchedule={aiSchedule} setAiSchedule={setAiSchedule} />}
-        {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} />}
+        {activeNav === 'analytics' && <AnalyticsSection tasks={tasks} habits={habitsWithProgress} settings={settings} smokeStats={smokeStats} currentTodayStr={app.currentTodayStr} />}
         {activeNav === 'german' && <GermanSection tasks={tasks} addTask={addTask} notify={notify} />}
         {activeNav === 'cyber' && (
           <CyberSection
